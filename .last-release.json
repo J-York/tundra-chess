@@ -1,12 +1,12 @@
 {
-  "release": "20260908-064830-balance-and-tooling",
-  "previous": "20260905-211704-companions-22",
-  "note": "五开局与阵营权重拉平、难度阶梯重标定、格式化与 lint 基线",
+  "release": "20260908-073703-drift-free-rules",
+  "previous": "20260908-064830-balance-and-tooling",
+  "note": "数值与文案单一来源、地图分支扩大",
   "hashes": {
     "index.html": "ee8d8ed6819904fa4a8fd0e4b031d586a74822e084a480327068440c7dc42ed2",
     "style.css": "1b9910dd0d30e4471dee6a1c6b5267eb5c1a6659399d2295c8a714e11040ce4c",
-    "world.js": "0d53293b1aba15d29bde306df106b7f12bfcc5505ee68a0be36a0541f3680320",
-    "engine.js": "ab6394c71d0be4a6f7c2a7255a106e1e21b1a106631e8ce5c4ab93ff372cda52",
+    "world.js": "4c9d9d9af137237c6a2229229a5c8a7afae3f96a5b36afdd02fa429f9cbcc51f",
+    "engine.js": "a5cc287d3098cc31f399e63bb9a6e81f709da67433eb64b43ee0b3ec7c4d853a",
     "game.js": "721ae6ddfd74d86dffa9acd5ad1a37d7d3160ccf8ff2e42e66b01b45a912d819",
     "audio.js": "82de5ea124c362177d15a33568ec86c3bffd789c12a5ef04101935f8f58e6f4a",
     "art.js": "54dab4d8bab035f30e1635c3ac0b4509adbfd08c3ce7726a608a405b4e1846c4",

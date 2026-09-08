@@ -2,8 +2,8 @@
 
 2026-09-05：公开入口 https://chess.jyork.de/ 。本次只更新独立游戏站点静态文件。
 
-- 当前版本：`/personal/tundra-chess/releases/20260908-064830-balance-and-tooling`，current 已原子切换。
-- 保留回退版本：`/personal/tundra-chess/releases/20260905-211704-companions-22`。
+- 当前版本：`/personal/tundra-chess/releases/20260908-073703-drift-free-rules`，current 已原子切换。
+- 保留回退版本：`/personal/tundra-chess/releases/20260908-064830-balance-and-tooling`。
 - Nginx：`/etc/nginx/conf.d/tundra-game.conf`，仅监听 `127.0.0.1:8879`。
 - 隧道：tundra-chess；Supervisor 配置 `/personal/tundra-chess/private/supervisord.conf`。本次没有修改或重启隧道，发布后 RUNNING。
 - 凭据与测试文件不属于公开目录。沿用此前自动重启和 cron @reboot 设置；本次没有重启整个 BOH 容器。
