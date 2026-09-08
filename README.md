@@ -63,6 +63,7 @@ npm run verify       # 语法检查 + eslint + prettier --check + 71 项规则�
 npm test             # node test.cjs
 npm run balance      # node balance.cjs 30，五开局 × 三难度共 450 局
 npm run fingerprint  # 输出规则行为指纹，用于证明重构没有改变语义
+npm run browser-test # 真实浏览器走完两段远征，输出界面指纹（需要 Chrome）
 npm run format       # prettier --write .
 ```
 
@@ -70,7 +71,9 @@ npm run format       # prettier --write .
 
 - `world.js`：章节、敌群、词缀、事件及种子地图生成。
 - `engine.js`：纯规则、战斗、经济、地图服务和存档校验。
-- `game.js`：UI、战报、交互与保存。
+- 界面按职责分为六个模块，行为注册在 `Tundra` 命名空间上，共享数据（`state` / `prefs`）保持全局：
+  `ui-store.js` 存档与通知、`ui-effects.js` 战斗动画、`ui-map.js` 路线与地图、`ui-board.js` 棋盘与面板、
+  `ui-battle.js` 战斗节拍、`ui-dialogs.js` 全部弹窗；`game.js` 只负责事件接线与启动。
 - `art.js` / `audio.js`：伙伴 SVG 和合成音效。
 - `index.html` / `style.css` / `assets/forest.png`：页面、布局与场景。场景来源见 assets/README.md。
 - `tests/feedback-qa.html?phase=loss` 等本轮测试页面使用隔离内存存储，不覆盖玩家主存档、不发布到公网。
