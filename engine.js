@@ -645,45 +645,98 @@
     ITEMS[id + '_plus'] = { name: def.name + '·精制', icon: def.icon, desc: def.text(refined), ...refined };
   }
   const BASIC_ITEMS = Object.keys(ITEM_DEFS);
-  const RELICS = {
-    vigor: { name: '古树之种', icon: '❧', desc: '全队最大生命 +12%' },
-    edge: { name: '月光磨石', icon: '☽', desc: '全队攻击 +10%' },
-    tempo: { name: '风之铃', icon: '♩', desc: '全队攻击速度 +10%' },
-    spark: { name: '捕星瓶', icon: '✧', desc: '全队初始法力 +20' },
-    shelter: { name: '苔原之心', icon: '⬡', desc: '开战时全队获得 35 点护盾' },
-    thorns: { name: '荆棘冠冕', icon: '♜', desc: '被普攻时反弹所受生命伤害的 20%' },
-    wisdom: { name: '旅人手札', icon: '▤', desc: '每次胜利额外获得 1 金币' },
-    ration: { name: '守望口粮', icon: '♧', desc: '每次胜利的阵亡损耗减少 2 点，最低为 0' },
-    prospector: { name: '探险徽记', icon: '♜', desc: '每次精英或首领胜利额外获得 2 金币' },
-    bargain: { name: '行商信物', icon: '◈', desc: '商人所有商品便宜 2 金币，最低 1 金币' },
-    bloodpact: { name: '赤月契约', icon: '☽', desc: '全队攻击 +18%，但每次胜利额外消耗 2 远征生命' },
+  // Relic text is rendered from the same values the rules read, so a relic cannot promise one
+  // number and grant another. RELIC_VALUES is the single place a relic's strength is tuned.
+  const RELIC_DEFS = {
+    vigor: { name: '古树之种', icon: '❧', values: { hp: 0.12 }, text: v => `全队最大生命 +${pct(v.hp)}%` },
+    edge: { name: '月光磨石', icon: '☽', values: { atk: 0.1 }, text: v => `全队攻击 +${pct(v.atk)}%` },
+    tempo: { name: '风之铃', icon: '♩', values: { haste: 0.1 }, text: v => `全队攻击速度 +${pct(v.haste)}%` },
+    spark: { name: '捕星瓶', icon: '✧', values: { mana: 20 }, text: v => `全队初始法力 +${num(v.mana)}` },
+    shelter: {
+      name: '苔原之心',
+      icon: '⬡',
+      values: { shield: 35 },
+      text: v => `开战时全队获得 ${num(v.shield)} 点护盾`,
+    },
+    thorns: {
+      name: '荆棘冠冕',
+      icon: '♜',
+      values: { reflect: 0.2 },
+      text: v => `被普攻时反弹所受生命伤害的 ${pct(v.reflect)}%`,
+    },
+    wisdom: { name: '旅人手札', icon: '▤', values: { gold: 1 }, text: v => `每次胜利额外获得 ${num(v.gold)} 金币` },
+    ration: {
+      name: '守望口粮',
+      icon: '♧',
+      values: { relief: 2 },
+      text: v => `每次胜利的阵亡损耗减少 ${num(v.relief)} 点，最低为 0`,
+    },
+    prospector: {
+      name: '探险徽记',
+      icon: '♜',
+      values: { gold: 2 },
+      text: v => `每次精英或首领胜利额外获得 ${num(v.gold)} 金币`,
+    },
+    bargain: {
+      name: '行商信物',
+      icon: '◈',
+      values: { discount: 2, floor: 1 },
+      text: v => `商人所有商品便宜 ${num(v.discount)} 金币，最低 ${num(v.floor)} 金币`,
+    },
+    bloodpact: {
+      name: '赤月契约',
+      icon: '☽',
+      values: { atk: 0.18, life: 2 },
+      text: v => `全队攻击 +${pct(v.atk)}%，但每次胜利额外消耗 ${num(v.life)} 远征生命`,
+    },
     wardflow: {
       name: '潮汐盾纹',
       icon: '≈',
-      desc: '友军护盾吸收伤害时恢复 12 法力；每名伙伴每秒最多触发一次',
       build: 'ward',
+      values: { mana: 12, cooldown: 1 },
+      text: v =>
+        `友军护盾吸收伤害时恢复 ${num(v.mana)} 法力；` +
+        `每名伙伴每${v.cooldown === 1 ? '' : ' ' + num(v.cooldown) + ' '}秒最多触发一次`,
     },
     moonwell: {
       name: '赤月泉石',
       icon: '◉',
-      desc: '友军普攻暴击后，治疗最虚弱友军，数值为攻击的 45%；受治疗加成和凋零影响',
       build: 'crit',
+      values: { ratio: 0.45 },
+      text: v => `友军普攻暴击后，治疗最虚弱友军，数值为攻击的 ${pct(v.ratio)}%；受治疗加成和凋零影响`,
     },
     chorus: {
       name: '三重星铃',
       icon: '♬',
-      desc: '每名伙伴每第三次施法，为全队提供 24 点护盾，持续 5 秒',
       build: 'cast',
+      values: { shield: 24, cadence: 3 },
+      text: v => `每名伙伴每第${cn(v.cadence)}次施法，为全队提供 ${num(v.shield)} 点护盾，持续 ${SHIELD_SECONDS} 秒`,
     },
     overflow: {
       name: '满溢之杯',
       icon: '♧',
-      desc: '友军主动治疗的溢出量有 50% 转为 5 秒护盾；最多补到目标最大生命的 25%，生命自然回复不触发',
       build: 'heal',
+      values: { share: 0.5, cap: 0.25 },
+      text: v =>
+        `友军主动治疗的溢出量有 ${pct(v.share)}% 转为 ${SHIELD_SECONDS} 秒护盾；` +
+        `最多补到目标最大生命的 ${pct(v.cap)}%，生命自然回复不触发`,
     },
-    spring: { name: '林间泉水', icon: '♧', desc: '立即恢复 25 点远征生命' },
-    purse: { name: '旅人的钱袋', icon: '◈', desc: '立即获得 7 金币' },
+    spring: { name: '林间泉水', icon: '♧', values: { life: 25 }, text: v => `立即恢复 ${num(v.life)} 点远征生命` },
+    purse: { name: '旅人的钱袋', icon: '◈', values: { gold: 7 }, text: v => `立即获得 ${num(v.gold)} 金币` },
   };
+  const RELICS = {};
+  const RELIC_VALUES = {};
+  for (const [id, def] of Object.entries(RELIC_DEFS)) {
+    RELICS[id] = {
+      name: def.name,
+      icon: def.icon,
+      desc: def.text(def.values),
+      ...(def.build ? { build: def.build } : {}),
+    };
+    RELIC_VALUES[id] = def.values;
+  }
+  // How many copies of a relic are held, times the value one copy grants.
+  const relicValue = (relics, id, key) => count(relics, id) * RELIC_VALUES[id][key];
   const CHAPTERS = W.CHAPTERS,
     NODES = W.NODES,
     AFFIXES = W.AFFIXES,
@@ -935,7 +988,7 @@
       d.hp *
         star *
         scale *
-        (1 + (t.forest >= 3 ? 0.28 : t.forest >= 2 ? 0.18 : 0) + count(relics, 'vigor') * 0.12 + (i.hp || 0)),
+        (1 + (t.forest >= 3 ? 0.28 : t.forest >= 2 ? 0.18 : 0) + relicValue(relics, 'vigor', 'hp') + (i.hp || 0)),
     );
     return {
       maxHp: hp,
@@ -945,8 +998,8 @@
           scale *
           (1 +
             (t.ember >= 3 ? 0.14 : t.ember >= 2 ? 0.08 : 0) +
-            count(relics, 'edge') * 0.1 +
-            count(relics, 'bloodpact') * 0.18 +
+            relicValue(relics, 'edge', 'atk') +
+            relicValue(relics, 'bloodpact', 'atk') +
             (i.atk || 0)),
       ),
       armor: d.armor + (t.guardian >= 2 ? 8 : 0) + (i.armor || 0),
@@ -955,12 +1008,12 @@
         d.interval /
         (1 +
           (t.ember >= 3 ? 0.08 : 0) +
-          count(relics, 'tempo') * 0.1 +
+          relicValue(relics, 'tempo', 'haste') +
           (i.haste || 0) +
           (d.role === 'ranger' && t.ranger >= 2 ? 0.18 : 0)),
       moveInterval: 0.36 / (1 + (i.move || 0)),
       power: 1 + (t.astral >= 3 ? 0.35 : t.astral >= 2 ? 0.2 : 0) + (i.power || 0),
-      mana: Math.min(MAX_MANA, d.mana + (t.astral >= 3 ? 15 : 0) + count(relics, 'spark') * 20 + (i.mana || 0)),
+      mana: Math.min(MAX_MANA, d.mana + (t.astral >= 3 ? 15 : 0) + relicValue(relics, 'spark', 'mana') + (i.mana || 0)),
       manaRegen: 3 + (t.mage >= 2 ? 3 : 0),
       regen: t.forest >= 3 ? 0.008 : 0,
       crit: Math.min(
@@ -972,12 +1025,12 @@
       critPower: (t.moon >= 3 ? 1.75 : 1.5) + (i.critPower || 0),
       healing: 1 + (t.tide >= 3 ? 0.2 : 0) + (d.role === 'support' && t.support >= 2 ? 0.2 : 0) + (i.healing || 0),
       leech: i.leech || 0,
-      thorns: count(relics, 'thorns') * 0.2,
-      startShield: count(relics, 'shelter') * 35 + (t.tide >= 3 ? 45 : t.tide >= 2 ? 25 : 0),
-      shieldMana: count(relics, 'wardflow') * 12,
-      critHeal: count(relics, 'moonwell') * 0.45,
-      castWard: count(relics, 'chorus') * 24,
-      overflow: count(relics, 'overflow') * 0.5,
+      thorns: relicValue(relics, 'thorns', 'reflect'),
+      startShield: relicValue(relics, 'shelter', 'shield') + (t.tide >= 3 ? 45 : t.tide >= 2 ? 25 : 0),
+      shieldMana: relicValue(relics, 'wardflow', 'mana'),
+      critHeal: relicValue(relics, 'moonwell', 'ratio'),
+      castWard: relicValue(relics, 'chorus', 'shield'),
+      overflow: relicValue(relics, 'overflow', 'share'),
       castMana: i.castMana || 0,
       emergencyShield: i.emergencyShield || 0,
     };
@@ -1294,7 +1347,9 @@
       b.events.push({ type: 'heal', id: target.id, value, pos: target.pos, from: source.pos });
     }
     if (source.overflow && offered > value) {
-      const extra = Math.floor(Math.min((offered - value) * source.overflow, target.maxHp * 0.25 - target.shield));
+      const extra = Math.floor(
+        Math.min((offered - value) * source.overflow, target.maxHp * RELIC_VALUES.overflow.cap - target.shield),
+      );
       if (extra > 0) {
         shield(b, source, target, extra);
         proc(b, source, '满溢之杯');
@@ -1311,7 +1366,7 @@
     value -= absorbed;
     if (absorbed && target.shieldMana && b.time >= (target.wardReady || 0)) {
       target.mana = Math.min(MAX_MANA, target.mana + target.shieldMana);
-      target.wardReady = b.time + 1;
+      target.wardReady = b.time + RELIC_VALUES.wardflow.cooldown;
       proc(b, target, '潮汐盾纹');
     }
     value = Math.min(target.hp, value);
@@ -1550,7 +1605,7 @@
       u.mana = Math.min(MAX_MANA, u.mana + u.castMana);
       proc(b, u, '回响沙漏');
     }
-    if (!u.dead && u.castWard && u.casts % 3 === 0) {
+    if (!u.dead && u.castWard && u.casts % RELIC_VALUES.chorus.cadence === 0) {
       alive(b, u.side).forEach(v => shield(b, u, v, u.castWard));
       proc(b, u, '三重星铃');
     }
@@ -1693,9 +1748,9 @@
     const [kind, id] = key.split(':');
     if (kind === 'item') s.bag.push(id);
     else if (id === 'purse') {
-      s.gold += 7;
-      s.totalGold += 7;
-    } else if (id === 'spring') s.life = Math.min(100, s.life + 25);
+      s.gold += RELIC_VALUES.purse.gold;
+      s.totalGold += RELIC_VALUES.purse.gold;
+    } else if (id === 'spring') s.life = Math.min(100, s.life + RELIC_VALUES.spring.life);
     else s.relics.push(id);
   }
   function makeRewards(s) {
@@ -1727,10 +1782,12 @@
       detail.streak = s.streak >= 3 ? 1 : 0;
       detail.path = node.kind === 'boss' ? 5 : node.kind === 'elite' ? 3 : 0;
       detail.relic =
-        count(s.relics, 'wisdom') + (['elite', 'boss'].includes(node.kind) ? count(s.relics, 'prospector') * 2 : 0);
+        relicValue(s.relics, 'wisdom', 'gold') +
+        (['elite', 'boss'].includes(node.kind) ? relicValue(s.relics, 'prospector', 'gold') : 0);
       income = Object.values(detail).reduce((a, b) => a + b, 0);
       loss =
-        Math.max(0, Math.min(8, casualties * 2) - count(s.relics, 'ration') * 2) + count(s.relics, 'bloodpact') * 2;
+        Math.max(0, Math.min(8, casualties * 2) - relicValue(s.relics, 'ration', 'relief')) +
+        relicValue(s.relics, 'bloodpact', 'life');
       if (s.difficulty === 'hard' && casualties) loss += 1;
       if (node.kind === 'battle' && node.lootRoll < 0.22) {
         loot = lootFor(s);
@@ -1899,7 +1956,7 @@
       if (node.kind === 'merchant') {
         const rng = { rng: node.lootSeed },
           builds = buildAdvice(s),
-          discount = count(s.relics, 'bargain') * 2;
+          discount = relicValue(s.relics, 'bargain', 'discount');
         const missing = builds.find(b => b.owned && !b.ready),
           gearHint = missing
             ? { ward: 'heartwood', crit: 'moonlens', cast: 'channel', heal: 'fang' }[missing.id]
@@ -1928,7 +1985,12 @@
           })),
           { key: relic, price: 13 + node.act * 2, ...(core ? { hint: '开启「' + core.name + '」的核心' } : {}) },
           { key: 'heal:18', price: 7 },
-        ].map((o, i) => ({ ...o, id: String(i), price: Math.max(1, o.price - discount), sold: false }));
+        ].map((o, i) => ({
+          ...o,
+          id: String(i),
+          price: Math.max(RELIC_VALUES.bargain.floor, o.price - discount),
+          sold: false,
+        }));
       }
     }
     return {};
@@ -2604,6 +2666,8 @@
     ITEMS,
     BASIC_ITEMS,
     RELICS,
+    RELIC_DEFS,
+    RELIC_VALUES,
     CHAPTERS,
     NODES,
     AFFIXES,

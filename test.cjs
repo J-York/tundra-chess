@@ -1720,4 +1720,63 @@ check('Every mid-chapter stop offers a real choice, and the guaranteed stops mov
   for (const floor of [3, 4, 5]) assert.ok(merchantFloors.has(floor), 'guaranteed merchants must reach floor ' + floor);
 });
 
+check('Every relic number is rendered into its own description and reaches the rules', () => {
+  for (const [id, def] of Object.entries(E.RELIC_DEFS)) {
+    assert.equal(E.RELICS[id].desc, def.text(def.values), id + ' description must be rendered from its values');
+    assert.ok(Object.keys(def.values).length, id + ' must declare at least one number');
+    for (const key of Object.keys(def.values)) {
+      const tweaked = { ...def.values, [key]: def.values[key] * 2 + 1 };
+      assert.notEqual(
+        def.text(tweaked),
+        def.text(def.values),
+        id + '.' + key + ' is declared but never reaches the description',
+      );
+    }
+  }
+  // The described strength is the strength the rules apply, and it stacks per copy.
+  const roster = [{ id: 'u1', type: 'guard', pos: 20, star: 1, item: null }];
+  // Health and attack are rounded by stats(), so compare the rounded stat, not a ratio.
+  for (const [id, key, base, read] of [
+    ['vigor', 'hp', E.TYPES.guard.hp, s => s.maxHp],
+    ['edge', 'atk', E.TYPES.guard.atk, s => s.atk],
+  ])
+    for (const copies of [1, 2]) {
+      const actual = read(E.stats(roster[0], roster, Array(copies).fill(id)));
+      const expected = Math.round(base * (1 + E.RELIC_VALUES[id][key] * copies));
+      assert.equal(actual, expected, `${id} ×${copies} should reach ${expected}, rules gave ${actual}`);
+    }
+  const base = E.stats(roster[0], roster, []);
+  for (const [id, key, read] of [
+    ['thorns', 'reflect', s => s.thorns],
+    ['shelter', 'shield', s => s.startShield],
+    ['spark', 'mana', s => s.mana - base.mana],
+    ['wardflow', 'mana', s => s.shieldMana],
+    ['moonwell', 'ratio', s => s.critHeal],
+    ['chorus', 'shield', s => s.castWard],
+    ['overflow', 'share', s => s.overflow],
+  ])
+    for (const copies of [1, 2]) {
+      const actual = read(E.stats(roster[0], roster, Array(copies).fill(id)));
+      const expected = E.RELIC_VALUES[id][key] * copies;
+      assert.ok(
+        Math.abs(actual - expected) < 1e-6,
+        `${id} ×${copies} should grant ${expected} for ${key}, rules gave ${actual}`,
+      );
+    }
+
+  // Values the description states as flat caps must not scale with the number of copies.
+  const s = E.newRun({ seed: 12 });
+  s.relics = ['bargain', 'bargain'];
+  s.gold = 99;
+  s.phase = 'map';
+  s.completed = [s.nodeId];
+  const merchantNode = s.map.find(n => n.kind === 'merchant' && n.act === 0);
+  s.nodeId = merchantNode.id;
+  s.stage = merchantNode.act * 9 + merchantNode.floor;
+  s.visited = [s.nodeId];
+  E.enterNode(s, s.nodeId);
+  for (const offer of s.merchant)
+    assert.ok(offer.price >= E.RELIC_VALUES.bargain.floor, 'the discount floor must hold: ' + offer.price);
+});
+
 console.log(`\n${checks} rule checks passed.`);
