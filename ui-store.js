@@ -63,6 +63,18 @@ const Tundra = {};
 (function (T) {
   'use strict';
 
+  // Rewriting a container throws away its DOM, and with it any focus, scroll position or
+  // in-progress selection inside. Two thirds of the rewrites during play produce exactly the
+  // markup already on screen, so remember what each container last received and skip those.
+  function paint(id, html) {
+    const node = $(id);
+    // Compare against the DOM itself, not a remembered string. renderStatus appends the build
+    // note to #relics after painting it, and a cache would not see that: the container would
+    // never be reset and the note would pile up on every render.
+    if (!node || node.innerHTML === html) return false;
+    node.innerHTML = html;
+    return true;
+  }
   function text(id, value) {
     $(id).textContent = value;
   }
@@ -70,7 +82,7 @@ const Tundra = {};
   function save() {
     try {
       localStorage.setItem(SAVE, JSON.stringify(state));
-      $('save-status').innerHTML = '<i></i> 进度已保存';
+      paint('save-status', '<i></i> 进度已保存');
       return true;
     } catch {
       $('save-status').textContent = '存储不可用 · 请勿关闭页面';
@@ -161,6 +173,7 @@ const Tundra = {};
   }
 
   // Surface other modules call. Trimmed to what is actually used across files.
+  T.paint = paint;
   T.text = text;
   T.save = save;
   T.savePrefs = savePrefs;

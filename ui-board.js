@@ -21,12 +21,17 @@
     T.text('life-status', state.life > 60 ? '状态良好' : state.life > 30 ? '稍显疲惫' : '亟需休整');
     T.text('gold', state.gold);
     T.text('population', `${roster.length} / ${state.capacity}`);
-    $('income').innerHTML =
-      `胜利利息 <b>+${E.interest(state)}</b> <span title="每存 10 金币获得 1 利息，最高 2；开战结算前余额计算">${state.challenge === 'scarcity' ? '· 流水行囊：无利息' : '· 每 10 金币 +1'}</span>${state.streak ? ` · <b>${state.streak} 连胜</b>` : ''}`;
-    $('expand').innerHTML =
-      state.capacity >= E.maxCapacity(state) ? '✓ 队伍已满编' : `扩充队伍 <span>◈ ${E.expandCost(state)}</span>`;
+    T.paint(
+      'income',
+      `胜利利息 <b>+${E.interest(state)}</b> <span title="每存 10 金币获得 1 利息，最高 2；开战结算前余额计算">${state.challenge === 'scarcity' ? '· 流水行囊：无利息' : '· 每 10 金币 +1'}</span>${state.streak ? ` · <b>${state.streak} 连胜</b>` : ''}`,
+    );
+    T.paint(
+      'expand',
+      state.capacity >= E.maxCapacity(state) ? '✓ 队伍已满编' : `扩充队伍 <span>◈ ${E.expandCost(state)}</span>`,
+    );
     $('expand').disabled = !prep || state.capacity >= E.maxCapacity(state) || state.gold < E.expandCost(state);
-    $('synergies').innerHTML =
+    T.paint(
+      'synergies',
       Object.entries(E.FACTIONS)
         .map(([id, f]) => {
           const n = t[id],
@@ -34,30 +39,37 @@
           return `<button class="synergy ${n >= 2 ? 'active' : ''}" data-trait="${id}" title="${f.desc.join('；')}"><span>${f.icon}</span><span class="syn-copy">${f.name}<small>${n >= 2 ? f.desc[tier] : f.desc[0]}</small></span><b>${n}/${n >= 2 ? 3 : 2}</b></button>`;
         })
         .join('') +
-      `<div class="role-traits">${Object.entries(E.ROLE_TRAITS)
-        .map(
-          ([id, r]) =>
-            `<button class="role-pill ${t[id] >= 2 ? 'active' : ''}" data-trait="${id}" title="${r.desc}">${r.icon} ${r.name} ${t[id]}/2</button>`,
-        )
-        .join('')}</div>`;
+        `<div class="role-traits">${Object.entries(E.ROLE_TRAITS)
+          .map(
+            ([id, r]) =>
+              `<button class="role-pill ${t[id] >= 2 ? 'active' : ''}" data-trait="${id}" title="${r.desc}">${r.icon} ${r.name} ${t[id]}/2</button>`,
+          )
+          .join('')}</div>`,
+    );
     T.text('relic-count', state.relics.length);
-    $('relics').innerHTML = state.relics.length
-      ? `<div class="relic-list">${[...new Set(state.relics)].map(id => `<button class="relic" data-relic="${id}" title="${E.RELICS[id].name} · ${E.RELICS[id].desc}">${E.RELICS[id].icon}${E.count(state.relics, id) > 1 ? `<small>×${E.count(state.relics, id)}</small>` : ''}</button>`).join('')}</div>`
-      : '<p class="empty-note">精英、首领与奇遇，藏着稀有的馈赠。</p>';
+    T.paint(
+      'relics',
+      state.relics.length
+        ? `<div class="relic-list">${[...new Set(state.relics)].map(id => `<button class="relic" data-relic="${id}" title="${E.RELICS[id].name} · ${E.RELICS[id].desc}">${E.RELICS[id].icon}${E.count(state.relics, id) > 1 ? `<small>×${E.count(state.relics, id)}</small>` : ''}</button>`).join('')}</div>`
+        : '<p class="empty-note">精英、首领与奇遇，藏着稀有的馈赠。</p>',
+    );
     $('relics').insertAdjacentHTML(
       'beforeend',
       `<button class="build-guide-button" id="build-guide">构筑手记 · ${E.buildAdvice(state).filter(b => b.active).length} 组搭配 ↗</button>`,
     );
     T.text('bag-count', state.bag.length + ' 件');
     const own = state.units.some(u => u.id === ui.selected);
-    $('bag').innerHTML = state.bag.length
-      ? state.bag
-          .map(
-            (id, i) =>
-              `<button class="bag-item ${own && prep ? 'ready' : ''}" data-equip="${i}" title="${E.ITEMS[id].name} · ${E.ITEMS[id].desc}" aria-label="装备 ${E.ITEMS[id].name}" ${!prep ? 'disabled' : ''}>${E.ITEMS[id].icon}</button>`,
-          )
-          .join('')
-      : '<span class="empty-note">行囊暂时空了</span>';
+    T.paint(
+      'bag',
+      state.bag.length
+        ? state.bag
+            .map(
+              (id, i) =>
+                `<button class="bag-item ${own && prep ? 'ready' : ''}" data-equip="${i}" title="${E.ITEMS[id].name} · ${E.ITEMS[id].desc}" aria-label="装备 ${E.ITEMS[id].name}" ${!prep ? 'disabled' : ''}>${E.ITEMS[id].icon}</button>`,
+            )
+            .join('')
+        : '<span class="empty-note">行囊暂时空了</span>',
+    );
     T.text(
       'difficulty-badge',
       E.DIFFICULTIES[state.difficulty].name +
@@ -79,29 +91,38 @@
       combat = E.isCombat(node);
     const preview = { ...state, nodeId: node.id },
       foes = E.enemyRoster(preview);
-    $('enemy-portrait').innerHTML = combat
-      ? art(foes[0].type)
-      : `<span class="scout-symbol">${E.NODES[node.kind].icon}</span>`;
+    T.paint(
+      'enemy-portrait',
+      combat ? art(foes[0].type) : `<span class="scout-symbol">${E.NODES[node.kind].icon}</span>`,
+    );
     T.text('enemy-tag', `第 ${node.act + 1} 章 · ${E.NODES[node.kind].name}`);
     T.text('enemy-name', node.kind === 'event' && state.phase === 'map' ? '未知事件' : node.name);
     T.text('enemy-description', T.nodeSummary(node));
-    $('enemy-list').innerHTML = foes
-      .map(
-        u =>
-          `<${state.phase === 'map' ? 'div' : 'button'} class="enemy-row" ${state.phase === 'map' ? '' : `data-inspect="${u.id}" title="查看 ${E.TYPES[u.type].name}"`}>${art(u.type)}<span>${E.TYPES[u.type].name}<small>${T.factionName(u.type)} · ${E.ROLES[E.TYPES[u.type].role]}</small></span><span class="enemy-meta">${'★'.repeat(u.star)}</span></${state.phase === 'map' ? 'div' : 'button'}>`,
-      )
-      .join('');
-    $('scout-tip').innerHTML =
-      `<strong>✧ ${combat ? '战术手记' : '远征手记'}</strong>${combat ? E.AFFIXES[node.affix].desc + ' ' + node.tip : '每个节点只处理一次。伙伴始终保留，远征生命与金币决定你能走多远。'}`;
+    T.paint(
+      'enemy-list',
+      foes
+        .map(
+          u =>
+            `<${state.phase === 'map' ? 'div' : 'button'} class="enemy-row" ${state.phase === 'map' ? '' : `data-inspect="${u.id}" title="查看 ${E.TYPES[u.type].name}"`}>${art(u.type)}<span>${E.TYPES[u.type].name}<small>${T.factionName(u.type)} · ${E.ROLES[E.TYPES[u.type].role]}</small></span><span class="enemy-meta">${'★'.repeat(u.star)}</span></${state.phase === 'map' ? 'div' : 'button'}>`,
+        )
+        .join(''),
+    );
+    T.paint(
+      'scout-tip',
+      `<strong>✧ ${combat ? '战术手记' : '远征手记'}</strong>${combat ? E.AFFIXES[node.affix].desc + ' ' + node.tip : '每个节点只处理一次。伙伴始终保留，远征生命与金币决定你能走多远。'}`,
+    );
     $('inspect-enemy').hidden = !combat || state.phase === 'map';
   }
 
   function buildBoard() {
-    $('board').innerHTML = Array.from(
-      { length: 36 },
-      (_, i) =>
-        `<button class="cell ${i >= E.HOME ? 'home' : ''}" data-cell="${i}" aria-label="${i >= E.HOME ? '我方' : '敌方'}第 ${Math.floor(i / 6) + 1} 排第 ${(i % 6) + 1} 格" ${!E.canManage(state) ? 'disabled' : ''}></button>`,
-    ).join('');
+    T.paint(
+      'board',
+      Array.from(
+        { length: 36 },
+        (_, i) =>
+          `<button class="cell ${i >= E.HOME ? 'home' : ''}" data-cell="${i}" aria-label="${i >= E.HOME ? '我方' : '敌方'}第 ${Math.floor(i / 6) + 1} 排第 ${(i % 6) + 1} 格" ${!E.canManage(state) ? 'disabled' : ''}></button>`,
+      ).join(''),
+    );
   }
 
   function actorHTML(u) {
@@ -111,7 +132,7 @@
   function updateActors(rebuild = false) {
     const units = T.liveUnits();
     if (rebuild) {
-      $('actors').innerHTML = units.map(actorHTML).join('');
+      T.paint('actors', units.map(actorHTML).join(''));
     }
     const inCombat = state.phase === 'battle' || state.phase === 'result';
     $('actors').classList.toggle('in-battle', inCombat);
@@ -189,7 +210,9 @@
     for (const el of $('actors').querySelectorAll('[data-actor]'))
       el.classList.toggle('current-target', !!target && el.dataset.actor === target.id);
     const lines = $('target-link');
-    lines.innerHTML = '';
+    // Built once and painted once: this runs on every battle tick, and the arrow is
+    // unchanged in almost all of them.
+    let arrow = '';
     if (u && target) {
       const a = T.effectPos(u.pos),
         v = T.effectPos(target.pos),
@@ -198,14 +221,18 @@
         length = Math.hypot(dx, dy) || 1;
       const start = { x: a.x + (dx / length) * 18, y: a.y + (dy / length) * 18 },
         end = { x: v.x - (dx / length) * 24, y: v.y - (dy / length) * 24 };
-      lines.innerHTML = `<defs><marker id="target-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs><line x1="${start.x}" y1="${start.y}" x2="${end.x}" y2="${end.y}" marker-end="url(#target-arrow)"/>`;
+      arrow = `<defs><marker id="target-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs><line x1="${start.x}" y1="${start.y}" x2="${end.x}" y2="${end.y}" marker-end="url(#target-arrow)"/>`;
       lines.classList.toggle('taunt-link', u.targetReason === 'taunt');
     }
+    T.paint('target-link', arrow);
     const detail = $('live-status');
     if (!detail || !u) return;
     const labels = statusDetails(u),
       reason = { nearest: '按距离选择', taunt: '受嘲讽影响', skill: '技能选择的目标' };
-    detail.innerHTML = `<strong>${u.dead ? '已阵亡' : target ? '当前目标 · ' + E.TYPES[target.type].name : u.ambushPending ? '等待潜伏结束' : u.stun > b.time ? '眩晕中，无法行动' : '当前没有可攻击目标'}</strong>${target ? `<small>${reason[u.targetReason] || '当前行动目标'} · 棋盘箭头指向该目标</small>` : ''}<p>${labels.length ? labels.join(' · ') : '无控制或防护状态'}</p>`;
+    T.paint(
+      'live-status',
+      `<strong>${u.dead ? '已阵亡' : target ? '当前目标 · ' + E.TYPES[target.type].name : u.ambushPending ? '等待潜伏结束' : u.stun > b.time ? '眩晕中，无法行动' : '当前没有可攻击目标'}</strong>${target ? `<small>${reason[u.targetReason] || '当前行动目标'} · 棋盘箭头指向该目标</small>` : ''}<p>${labels.length ? labels.join(' · ') : '无控制或防护状态'}</p>`,
+    );
   }
 
   function renderSelection() {
@@ -261,23 +288,29 @@
   function renderBench() {
     const bench = E.reserves(state);
     T.text('bench-count', `${bench.length} / ${E.BENCH} · 可拖动上阵`);
-    $('bench').innerHTML = Array.from({ length: E.BENCH }, (_, i) => {
-      const u = bench[i];
-      return `<button class="bench-slot ${u ? 'occupied' : ''} ${u?.id === ui.selected ? 'selected' : ''}" data-bench="${u?.id || ''}" draggable="${!!u && E.canManage(state)}" aria-label="${u ? E.TYPES[u.type].name + ' 备战伙伴' : '空备战席'}">${u ? `${art(u.type)}<span class="stars">${'★'.repeat(u.star)}</span><span class="unit-name">${E.TYPES[u.type].name}</span>${u.item ? `<span class="equipment-mark">${E.ITEMS[u.item].icon}</span>` : ''}` : '·'}</button>`;
-    }).join('');
+    T.paint(
+      'bench',
+      Array.from({ length: E.BENCH }, (_, i) => {
+        const u = bench[i];
+        return `<button class="bench-slot ${u ? 'occupied' : ''} ${u?.id === ui.selected ? 'selected' : ''}" data-bench="${u?.id || ''}" draggable="${!!u && E.canManage(state)}" aria-label="${u ? E.TYPES[u.type].name + ' 备战伙伴' : '空备战席'}">${u ? `${art(u.type)}<span class="stars">${'★'.repeat(u.star)}</span><span class="unit-name">${E.TYPES[u.type].name}</span>${u.item ? `<span class="equipment-mark">${E.ITEMS[u.item].icon}</span>` : ''}` : '·'}</button>`;
+      }).join(''),
+    );
   }
 
   function renderShop() {
     const prep = E.canManage(state);
-    $('shop-cards').innerHTML = state.shop
-      .map((id, index) => {
-        if (!id) return '<div class="sold"><strong>❧</strong><span>伙伴已加入旅途</span></div>';
-        const d = E.TYPES[id],
-          n = state.units.filter(u => u.type === id && u.star === 1).length;
-        return `<article class="shop-card ${state.gold >= d.cost ? 'affordable' : ''}" style="--color:${d.color}"><div class="shop-portrait">${art(id)}<span class="card-cost">◈ ${d.cost}</span><button class="card-info-button" data-codex="${id}" title="查看技能" aria-label="查看 ${d.name} 技能">i</button>${n ? `<span class="owned-badge">${n >= 2 ? '✦ 招募即可升星' : '已拥有 ' + n + ' / 3'}</span>` : ''}</div><div class="card-info"><div class="card-name">${d.name}<span>★</span></div><div class="card-tags">${T.factionName(id)} · ${E.ROLES[d.role]}</div><div class="card-stats"><span>♥ ${d.hp}</span><span>⚔ ${d.atk}</span><span>⬡ ${d.armor}</span></div><button class="recruit" data-buy="${index}" ${!prep || state.gold < d.cost ? 'disabled' : ''}>${state.gold < d.cost ? '金币不足' : '招募伙伴'} <span>＋</span></button></div></article>`;
-      })
-      .join('');
-    $('refresh').innerHTML = `↻ 刷新 <span>${state.freeRefresh ? '免费 · ' + state.freeRefresh : '◈ 2'}</span>`;
+    T.paint(
+      'shop-cards',
+      state.shop
+        .map((id, index) => {
+          if (!id) return '<div class="sold"><strong>❧</strong><span>伙伴已加入旅途</span></div>';
+          const d = E.TYPES[id],
+            n = state.units.filter(u => u.type === id && u.star === 1).length;
+          return `<article class="shop-card ${state.gold >= d.cost ? 'affordable' : ''}" style="--color:${d.color}"><div class="shop-portrait">${art(id)}<span class="card-cost">◈ ${d.cost}</span><button class="card-info-button" data-codex="${id}" title="查看技能" aria-label="查看 ${d.name} 技能">i</button>${n ? `<span class="owned-badge">${n >= 2 ? '✦ 招募即可升星' : '已拥有 ' + n + ' / 3'}</span>` : ''}</div><div class="card-info"><div class="card-name">${d.name}<span>★</span></div><div class="card-tags">${T.factionName(id)} · ${E.ROLES[d.role]}</div><div class="card-stats"><span>♥ ${d.hp}</span><span>⚔ ${d.atk}</span><span>⬡ ${d.armor}</span></div><button class="recruit" data-buy="${index}" ${!prep || state.gold < d.cost ? 'disabled' : ''}>${state.gold < d.cost ? '金币不足' : '招募伙伴'} <span>＋</span></button></div></article>`;
+        })
+        .join(''),
+    );
+    T.paint('refresh', `↻ 刷新 <span>${state.freeRefresh ? '免费 · ' + state.freeRefresh : '◈ 2'}</span>`);
     $('refresh').disabled = !prep || (!state.freeRefresh && state.gold < 2);
     $('lock').disabled = !prep;
     $('lock').textContent = state.locked ? '▣ 已锁定' : '◇ 锁定';
@@ -381,7 +414,7 @@
   function renderInspector() {
     const u = state.units.find(u => u.id === ui.inspected) || E.enemyRoster(state).find(u => u.id === ui.inspected);
     if (!u) {
-      $('unit-panel').innerHTML = '<div class="unit-empty">❧<br>点击棋盘或备战席伙伴<br>查看技能、属性与装备。</div>';
+      T.paint('unit-panel', '<div class="unit-empty">❧<br>点击棋盘或备战席伙伴<br>查看技能、属性与装备。</div>');
       return;
     }
     const own = state.units.some(v => v.id === u.id),
@@ -392,17 +425,24 @@
       prep = E.canManage(state),
       st = state.phase === 'battle' && live ? live : base;
     const value = d.cost * 3 ** (u.star - 1);
-    $('unit-panel').innerHTML =
-      `<div class="inspector-title"><span class="tiny muted">${own ? '我方伙伴' : '敌方侦察'}${u.pos === null ? ' · 备战席' : ''}</span><button class="quiet" id="clear-selection" title="取消选择">×</button></div><div class="inspect-art">${art(u.type)}</div><div class="inspect-name">${d.name}</div><div class="inspect-tags">${T.factionName(u.type)} · ${E.ROLES[d.role]}${!own ? ' · 敌方' : ''}</div><div class="inspect-stars">${'★'.repeat(u.star)}</div>${state.phase === 'battle' ? '<div class="live-status" id="live-status"></div>' : ''}<div class="stat-grid"><div><small>生命</small><b>${live && state.phase === 'battle' ? Math.ceil(live.hp) + '/' : ''}${st.maxHp}</b></div><div><small>攻击</small><b>${st.atk}</b></div><div><small>护甲</small><b>${st.armor}</b></div><div><small>攻击间隔</small><b>${st.interval.toFixed(2)}s</b></div><div><small>射程</small><b>${st.range} 格</b></div><div><small>技能强度</small><b>${Math.round(st.power * 100)}%</b></div></div><div class="item-equipped">${u.item ? `${E.ITEMS[u.item].icon} ${E.ITEMS[u.item].name}` : '◇ 尚未装备'}${own && prep ? '<button id="manage-equipment">更换装备</button>' : ''}</div>${state.phase === 'prep' && u.pos !== null ? `<div class="range-controls"><button data-range-mode="attack" class="${ui.rangeMode === 'attack' ? 'active' : ''}">普攻射程</button><button data-range-mode="skill" class="${ui.rangeMode === 'skill' ? 'active' : ''}">技能预览</button></div><p class="range-help">${['mage', 'frost', 'hexer', 'ranger', 'wavecaller', 'cinder', 'duskblade', 'sparkscout'].includes(u.type) ? '点击敌方棋格或敌人选择预览位置；超出金色射程时需先靠近。' : u.type === 'guard' ? '蓝色为嘲讽范围，战斗中影响范围内敌人。' : u.type === 'knight' ? '蓝色为自身与相邻友军的护盾范围。' : ['oakmaul', 'emberguard'].includes(u.type) ? '蓝色为相邻技能范围，需接近敌人后施放。' : ['healer', 'oracle', 'warden', 'pearl', 'tideguard', 'songbird'].includes(u.type) ? '蓝色为可选友军；技能自动按生命或法力选取。' : u.type === 'rogue' ? '蓝色为可能的突袭目标；血量和空位决定实际落点。' : u.type === 'hunter' ? '预览当前最远的两名敌人，目标随站位变化。' : u.type === 'flarebow' ? '预览当前最近的两名敌人，目标随站位变化。' : u.type === 'breaker' ? '蓝色为可选敌人；优先击破最厚护盾，潜伏敌人不能被选中。' : '蓝色为全场技能范围。'}</p>` : ''}<div class="skill-box"><strong>✧ ${d.skill}</strong><p>${d.desc}</p><small>100 法力自动释放 · 普攻 +21，受击 +6 · 初始 ${Math.round(base.mana)} 法力</small><small>${own && u.pos === null ? '预览假设上阵该伙伴后的羁绊；实际上阵人口仍受限制。' : '属性已计入当前羁绊、装备与遗物。'}</small></div>${u.item ? `<p class="equipped-desc">${E.ITEMS[u.item].desc}</p>` : ''}${own ? `<div class="inspect-actions"><button class="secondary" id="bench-unit" ${!prep || u.pos === null ? 'disabled' : ''}>撤至备战席</button><button class="danger" id="sell-unit" ${!prep ? 'disabled' : ''}>出售 ◈ ${value}</button></div>` : ''}<p class="flavor">“${d.flavor}”</p>`;
+    T.paint(
+      'unit-panel',
+      `<div class="inspector-title"><span class="tiny muted">${own ? '我方伙伴' : '敌方侦察'}${u.pos === null ? ' · 备战席' : ''}</span><button class="quiet" id="clear-selection" title="取消选择">×</button></div><div class="inspect-art">${art(u.type)}</div><div class="inspect-name">${d.name}</div><div class="inspect-tags">${T.factionName(u.type)} · ${E.ROLES[d.role]}${!own ? ' · 敌方' : ''}</div><div class="inspect-stars">${'★'.repeat(u.star)}</div>${state.phase === 'battle' ? '<div class="live-status" id="live-status"></div>' : ''}<div class="stat-grid"><div><small>生命</small><b>${live && state.phase === 'battle' ? Math.ceil(live.hp) + '/' : ''}${st.maxHp}</b></div><div><small>攻击</small><b>${st.atk}</b></div><div><small>护甲</small><b>${st.armor}</b></div><div><small>攻击间隔</small><b>${st.interval.toFixed(2)}s</b></div><div><small>射程</small><b>${st.range} 格</b></div><div><small>技能强度</small><b>${Math.round(st.power * 100)}%</b></div></div><div class="item-equipped">${u.item ? `${E.ITEMS[u.item].icon} ${E.ITEMS[u.item].name}` : '◇ 尚未装备'}${own && prep ? '<button id="manage-equipment">更换装备</button>' : ''}</div>${state.phase === 'prep' && u.pos !== null ? `<div class="range-controls"><button data-range-mode="attack" class="${ui.rangeMode === 'attack' ? 'active' : ''}">普攻射程</button><button data-range-mode="skill" class="${ui.rangeMode === 'skill' ? 'active' : ''}">技能预览</button></div><p class="range-help">${['mage', 'frost', 'hexer', 'ranger', 'wavecaller', 'cinder', 'duskblade', 'sparkscout'].includes(u.type) ? '点击敌方棋格或敌人选择预览位置；超出金色射程时需先靠近。' : u.type === 'guard' ? '蓝色为嘲讽范围，战斗中影响范围内敌人。' : u.type === 'knight' ? '蓝色为自身与相邻友军的护盾范围。' : ['oakmaul', 'emberguard'].includes(u.type) ? '蓝色为相邻技能范围，需接近敌人后施放。' : ['healer', 'oracle', 'warden', 'pearl', 'tideguard', 'songbird'].includes(u.type) ? '蓝色为可选友军；技能自动按生命或法力选取。' : u.type === 'rogue' ? '蓝色为可能的突袭目标；血量和空位决定实际落点。' : u.type === 'hunter' ? '预览当前最远的两名敌人，目标随站位变化。' : u.type === 'flarebow' ? '预览当前最近的两名敌人，目标随站位变化。' : u.type === 'breaker' ? '蓝色为可选敌人；优先击破最厚护盾，潜伏敌人不能被选中。' : '蓝色为全场技能范围。'}</p>` : ''}<div class="skill-box"><strong>✧ ${d.skill}</strong><p>${d.desc}</p><small>100 法力自动释放 · 普攻 +21，受击 +6 · 初始 ${Math.round(base.mana)} 法力</small><small>${own && u.pos === null ? '预览假设上阵该伙伴后的羁绊；实际上阵人口仍受限制。' : '属性已计入当前羁绊、装备与遗物。'}</small></div>${u.item ? `<p class="equipped-desc">${E.ITEMS[u.item].desc}</p>` : ''}${own ? `<div class="inspect-actions"><button class="secondary" id="bench-unit" ${!prep || u.pos === null ? 'disabled' : ''}>撤至备战席</button><button class="danger" id="sell-unit" ${!prep ? 'disabled' : ''}>出售 ◈ ${value}</button></div>` : ''}<p class="flavor">“${d.flavor}”</p>`,
+    );
     renderCombatFocus();
   }
 
   function renderLog() {
-    $('log').innerHTML = ui.logs.length
-      ? ui.logs
-          .map(l => `<div>${l.time !== null ? `<time>${l.time.toFixed(1)}s</time>` : ''}${escapeHTML(l.message)}</div>`)
-          .join('')
-      : '<p class="empty-note">先调整队伍，森林在等你出发。</p>';
+    T.paint(
+      'log',
+      ui.logs.length
+        ? ui.logs
+            .map(
+              l => `<div>${l.time !== null ? `<time>${l.time.toFixed(1)}s</time>` : ''}${escapeHTML(l.message)}</div>`,
+            )
+            .join('')
+        : '<p class="empty-note">先调整队伍，森林在等你出发。</p>',
+    );
     $('last-report').disabled = !state.report;
   }
 
@@ -421,8 +461,10 @@
     T.text('stage-label', `第 ${node.act + 1} 章 / ${node.floor + 1} · 9`);
     T.text('stage-title', node.name);
     $('arena').className = 'arena theme-' + node.theme;
-    $('stage-modifier').innerHTML =
-      `<span>${E.NODES[node.kind].icon} ${E.NODES[node.kind].name}</span><strong>${E.isCombat(node) ? E.AFFIXES[node.affix].name : '一次停留，一次选择'}</strong>`;
+    T.paint(
+      'stage-modifier',
+      `<span>${E.NODES[node.kind].icon} ${E.NODES[node.kind].name}</span><strong>${E.isCombat(node) ? E.AFFIXES[node.affix].name : '一次停留，一次选择'}</strong>`,
+    );
     if (state.battle && ['battle', 'result'].includes(state.phase)) {
       T.text(
         'enemy-power',

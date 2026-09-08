@@ -6,7 +6,7 @@
     T.pauseForDialog();
     ui.dialogKind = kind;
     $('modal').dataset.kind = kind;
-    $('modal-content').innerHTML = html;
+    T.paint('modal-content', html);
     if (!$('modal').open) $('modal').showModal();
     $('modal-content').querySelector('button:not(:disabled)')?.focus({ preventScroll: true });
   }
@@ -186,8 +186,8 @@
     ui.activeTab = 'scout';
     $('modal').close();
     ui.dialogKind = null;
-    $('effects').innerHTML = '';
-    $('floaters').innerHTML = '';
+    T.paint('effects', '');
+    T.paint('floaters', '');
     T.save();
     T.render();
     audio.play('start');

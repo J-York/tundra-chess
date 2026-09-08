@@ -5,8 +5,10 @@
   function renderRoute() {
     const node = E.currentNode(state),
       chapter = E.CHAPTERS[node.act];
-    $('route').innerHTML =
-      `<button id="open-map" class="route-map-button" title="查看三章路线与首领">⌘ 远征地图 <span>第 ${node.act + 1} 章 · ${chapter.name}</span></button><div class="journey-progress">${Array.from({ length: 9 }, (_, i) => `<span class="journey-step ${i === node.floor ? 'active' : i < node.floor ? 'done' : ''}" title="本章第 ${i + 1} 个节点">${i < node.floor ? '✓' : i === 8 ? '❖' : i + 1}</span>`).join('')}</div><button class="journey-seed" id="share-run" title="分享或重玩相同远征">种子 ${state.seed} ↗</button>`;
+    T.paint(
+      'route',
+      `<button id="open-map" class="route-map-button" title="查看三章路线与首领">⌘ 远征地图 <span>第 ${node.act + 1} 章 · ${chapter.name}</span></button><div class="journey-progress">${Array.from({ length: 9 }, (_, i) => `<span class="journey-step ${i === node.floor ? 'active' : i < node.floor ? 'done' : ''}" title="本章第 ${i + 1} 个节点">${i < node.floor ? '✓' : i === 8 ? '❖' : i + 1}</span>`).join('')}</div><button class="journey-seed" id="share-run" title="分享或重玩相同远征">种子 ${state.seed} ↗</button>`,
+    );
   }
 
   function selectedMapNode() {
@@ -54,41 +56,53 @@
     const title = (label, subtitle) =>
       `<div class="travel-heading"><span class="eyebrow">${E.CHAPTERS[node.act].name} · 第 ${node.floor + 1} 站</span><h3>${label}</h3><p>${subtitle}</p></div>`;
     if (state.phase === 'map') {
-      $('travel-surface').innerHTML =
-        `<div class="map-title"><strong>选择下一段旅途</strong><button class="quiet" id="open-map-large">展开地图 ↗</button></div>${mapHTML(node.act)}<p class="map-footnote">亮边节点可前往 · 点击查看，右下角确认 · 首领：${E.CHAPTERS[node.act].boss.name}</p>`;
+      T.paint(
+        'travel-surface',
+        `<div class="map-title"><strong>选择下一段旅途</strong><button class="quiet" id="open-map-large">展开地图 ↗</button></div>${mapHTML(node.act)}<p class="map-footnote">亮边节点可前往 · 点击查看，右下角确认 · 首领：${E.CHAPTERS[node.act].boss.name}</p>`,
+      );
     } else if (state.phase === 'camp') {
-      $('travel-surface').innerHTML =
+      T.paint(
+        'travel-surface',
         title('篝火旁的片刻', '只能选择一项。伙伴生命已恢复；此处补充的是远征生命。') +
-        `<div class="travel-choices"><button class="travel-choice" data-camp="heal"><b>♨ 休息</b><span>恢复 ${Math.min(26, 100 - state.life)} / 26 远征生命</span></button><button class="travel-choice" id="camp-forge" ${!E.campOptions(state).length ? 'disabled' : ''}><b>⚒ 精制装备</b><span>一件装备的加成提升 60%</span></button><button class="travel-choice" data-camp="supplies"><b>◈ 搜集物资</b><span>获得 5 金币，放弃休息与精制</span></button></div>`;
+          `<div class="travel-choices"><button class="travel-choice" data-camp="heal"><b>♨ 休息</b><span>恢复 ${Math.min(26, 100 - state.life)} / 26 远征生命</span></button><button class="travel-choice" id="camp-forge" ${!E.campOptions(state).length ? 'disabled' : ''}><b>⚒ 精制装备</b><span>一件装备的加成提升 60%</span></button><button class="travel-choice" data-camp="supplies"><b>◈ 搜集物资</b><span>获得 5 金币，放弃休息与精制</span></button></div>`,
+      );
     } else if (state.phase === 'merchant') {
-      $('travel-surface').innerHTML =
+      T.paint(
+        'travel-surface',
         title(
           '游商的行囊',
           `现有 ${state.gold} 金币。标记的商品可补足队伍搭配；可以买多件，也可以不买，商品不会刷新。`,
         ) +
-        `<div class="merchant-grid">${state.merchant
-          .map(o => {
-            const d = lootDescription(o.key);
-            return `<button class="merchant-offer ${o.sold ? 'purchased' : ''}" data-merchant="${o.id}" ${o.sold || state.gold < o.price || (o.key === 'heal:18' && state.life === 100) || (o.key.startsWith('relic:') && E.count(state.relics, o.key.slice(6)) >= 2) ? 'disabled' : ''}><span>${d.icon}</span><div><strong>${d.name}</strong>${o.hint ? `<em>${escapeHTML(o.hint)}</em>` : ''}<small>${d.desc}</small></div><b>${o.sold ? '已购' : '◈ ' + o.price}</b></button>`;
-          })
-          .join('')}</div>`;
+          `<div class="merchant-grid">${state.merchant
+            .map(o => {
+              const d = lootDescription(o.key);
+              return `<button class="merchant-offer ${o.sold ? 'purchased' : ''}" data-merchant="${o.id}" ${o.sold || state.gold < o.price || (o.key === 'heal:18' && state.life === 100) || (o.key.startsWith('relic:') && E.count(state.relics, o.key.slice(6)) >= 2) ? 'disabled' : ''}><span>${d.icon}</span><div><strong>${d.name}</strong>${o.hint ? `<em>${escapeHTML(o.hint)}</em>` : ''}<small>${d.desc}</small></div><b>${o.sold ? '已购' : '◈ ' + o.price}</b></button>`;
+            })
+            .join('')}</div>`,
+      );
     } else if (state.phase === 'event') {
       const ev = E.EVENTS[node.event];
-      $('travel-surface').innerHTML =
+      T.paint(
+        'travel-surface',
         title(ev.icon + ' ' + ev.name, ev.text) +
-        `<div class="travel-choices">${E.eventOptions(state)
-          .map(
-            o =>
-              `<button class="travel-choice" data-event-choice="${o.id}" ${o.disabled ? 'disabled' : ''}><b>${o.name}</b><span>${o.desc}</span></button>`,
-          )
-          .join('')}</div><p class="map-footnote">结果在本次旅途中固定，刷新不会改变运气。</p>`;
+          `<div class="travel-choices">${E.eventOptions(state)
+            .map(
+              o =>
+                `<button class="travel-choice" data-event-choice="${o.id}" ${o.disabled ? 'disabled' : ''}><b>${o.name}</b><span>${o.desc}</span></button>`,
+            )
+            .join('')}</div><p class="map-footnote">结果在本次旅途中固定，刷新不会改变运气。</p>`,
+      );
     } else if (state.phase === 'treasure') {
-      $('travel-surface').innerHTML =
+      T.paint(
+        'travel-surface',
         title('苔藓覆盖的旧箱', '封蜡还完好。你可以取出珍藏，也可以只带走箱边的金币。') +
-        `<div class="travel-choices"><button class="travel-choice" data-treasure="open"><b>▣ 打开珍藏</b><span>55% 随机遗物，45% 随机装备</span></button><button class="travel-choice" data-treasure="gold"><b>◈ 稳妥收获</b><span>固定获得 7 金币</span></button></div>`;
+          `<div class="travel-choices"><button class="travel-choice" data-treasure="open"><b>▣ 打开珍藏</b><span>55% 随机遗物，45% 随机装备</span></button><button class="travel-choice" data-treasure="gold"><b>◈ 稳妥收获</b><span>固定获得 7 金币</span></button></div>`,
+      );
     } else
-      $('travel-surface').innerHTML =
-        `<div class="travel-outcome"><span>${state.life ? '✧' : '☽'}</span><h3>${escapeHTML(state.nodeResult.title)}</h3><p>${escapeHTML(state.nodeResult.message)}</p><small>远征生命 ${state.life} / 100 · 金币 ${state.gold}</small></div>`;
+      T.paint(
+        'travel-surface',
+        `<div class="travel-outcome"><span>${state.life ? '✧' : '☽'}</span><h3>${escapeHTML(state.nodeResult.title)}</h3><p>${escapeHTML(state.nodeResult.message)}</p><small>远征生命 ${state.life} / 100 · 金币 ${state.gold}</small></div>`,
+      );
   }
 
   function lootDescription(key) {
