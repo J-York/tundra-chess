@@ -1,15 +1,15 @@
 {
-  "release": "20260905-211704-companions-22",
-  "previous": "20260905-174231-assets-utf8",
-  "note": "新增十位伙伴、潮汐与余烬阵营、辅助与刺客职业羁绊；双阵营连接阵容，图鉴支持组合筛选，保留旧存档与成长位",
+  "release": "20260908-064830-balance-and-tooling",
+  "previous": "20260905-211704-companions-22",
+  "note": "五开局与阵营权重拉平、难度阶梯重标定、格式化与 lint 基线",
   "hashes": {
-    "index.html": "346415ab3b9ab931dd69d9d7c67d1fa085634162c8744b8ef74bfb7134fa987b",
-    "style.css": "864b8e3d9ea6e99e0ab889c07037fe6d2d333d96dfd9be49267b7fd318dd01e2",
-    "world.js": "1db9253c5b5fb5517dbd64017007b6fe64fcdd5ebb28ca17acb7896fbf5e4d56",
-    "engine.js": "3dcfcb1242133f7ca2514d45785a494d324f746e23229be8237a31b1c9c44504",
-    "game.js": "2d13c7ab46125962ee66a2bbcd2861da42fc8ca10cde69a0c1f990de75b09ad5",
-    "audio.js": "eeebf29b189edf5c84d82d4f78df30242b7288803f85d2727b6eabfd640b34ec",
-    "art.js": "da69342d8ca0e5f24876d098fa1acc111a95d5b0e0d71ffb7312f6166f8b7c11",
+    "index.html": "ee8d8ed6819904fa4a8fd0e4b031d586a74822e084a480327068440c7dc42ed2",
+    "style.css": "1b9910dd0d30e4471dee6a1c6b5267eb5c1a6659399d2295c8a714e11040ce4c",
+    "world.js": "0d53293b1aba15d29bde306df106b7f12bfcc5505ee68a0be36a0541f3680320",
+    "engine.js": "ab6394c71d0be4a6f7c2a7255a106e1e21b1a106631e8ce5c4ab93ff372cda52",
+    "game.js": "721ae6ddfd74d86dffa9acd5ad1a37d7d3160ccf8ff2e42e66b01b45a912d819",
+    "audio.js": "82de5ea124c362177d15a33568ec86c3bffd789c12a5ef04101935f8f58e6f4a",
+    "art.js": "54dab4d8bab035f30e1635c3ac0b4509adbfd08c3ce7726a608a405b4e1846c4",
     "assets/forest.webp": "96cdf6f941502652da2c55e1090205852047c5230b932cb9ca512002843c6fb9"
   }
 }
