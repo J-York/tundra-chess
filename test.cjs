@@ -1688,4 +1688,36 @@ check('Every skill number comes from its params, and every description is render
   assert.equal(rogue.stealthUntil, 2.5, 'ambush plus stealth must match the described 1.5 + 1 seconds');
 });
 
+check('Every mid-chapter stop offers a real choice, and the guaranteed stops move with the seed', () => {
+  const merchantFloors = new Set(),
+    restShapes = new Set();
+  for (let seed = 1; seed <= 120; seed++) {
+    const map = E.newRun({ seed }).map;
+    for (const n of map) {
+      if (n.floor >= 1 && n.floor <= 6)
+        assert.ok(n.next.length >= 2, `${seed}: ${n.id} must offer a second road, got ${n.next.length}`);
+      assert.equal(new Set(n.next).size, n.next.length, `${seed}: ${n.id} must not repeat a road`);
+    }
+    for (let act = 0; act < 3; act++) {
+      const chapter = map.filter(n => n.act === act);
+      // A fight is always available, whatever the forced placements did to the floor.
+      for (let floor = 1; floor <= 7; floor++)
+        assert.ok(
+          chapter.some(n => n.floor === floor && n.kind === 'battle'),
+          `${seed}: act ${act} floor ${floor} must offer a fight`,
+        );
+      const merchants = chapter.filter(n => n.kind === 'merchant');
+      assert.ok(merchants.length, `${seed}: act ${act} must offer a merchant`);
+      merchants.forEach(n => merchantFloors.add(n.floor));
+      const rest = chapter.filter(n => n.floor === 7);
+      assert.equal(rest.filter(n => n.kind === 'camp').length, 2, `${seed}: two lanes must rest before the boss`);
+      assert.equal(rest.filter(n => n.kind === 'battle').length, 1);
+      restShapes.add(rest.map(n => n.kind).join('+'));
+    }
+  }
+  // The pre-boss rest floor and the merchant must not be pinned to one shape or one floor.
+  assert.equal(restShapes.size, 3, 'the fighting lane before a boss must vary: ' + [...restShapes]);
+  for (const floor of [3, 4, 5]) assert.ok(merchantFloors.has(floor), 'guaranteed merchants must reach floor ' + floor);
+});
+
 console.log(`\n${checks} rule checks passed.`);

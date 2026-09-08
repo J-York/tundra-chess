@@ -172,18 +172,31 @@
       'merchant',
       'treasure',
     ];
+    const REST_FLOOR = FLOORS - 2;
     for (let act = 0; act < CHAPTERS.length; act++) {
       const chapter = CHAPTERS[act];
+      // The guaranteed stops move with the seed instead of sitting on a fixed floor and lane,
+      // so the middle of a chapter is not the same shape in every expedition.
+      const merchantFloor = 3 + Math.floor(random(rng) * 3);
+      const merchantLane = Math.floor(random(rng) * 3);
+      const restFight = Math.floor(random(rng) * 3);
       for (let floor = 0; floor < FLOORS; floor++) {
         const lanes = floor === 0 || floor === FLOORS - 1 ? [1] : [0, 1, 2];
         let kinds = lanes.map(() => (floor === 0 ? 'battle' : floor === 8 ? 'boss' : pick(kindPool, rng)));
         if (lanes.length === 3) {
-          // Every floor offers a fight, with a meaningful alternative; camps precede every boss.
-          if (!kinds.includes('battle')) kinds[0] = 'battle';
-          if (kinds.every(k => k === 'battle')) kinds[2] = 'event';
           if (floor === 1) kinds = kinds.map(k => (k === 'elite' ? 'battle' : k));
-          if (floor === 4) kinds[1] = 'merchant';
-          if (floor === 7) kinds = ['camp', 'battle', 'camp'];
+          if (floor === merchantFloor) kinds[merchantLane] = 'merchant';
+          // Two of the three lanes before a boss rest, so a camp is always reachable.
+          if (floor === REST_FLOOR) kinds = [0, 1, 2].map(lane => (lane === restFight ? 'battle' : 'camp'));
+          // Every floor offers a fight, with a meaningful alternative. This runs after the
+          // placements above, which previously could overwrite the only battle on the floor.
+          if (!kinds.includes('battle')) {
+            // Never overwrite the guaranteed merchant; any other lane will do, and the pool can
+            // roll merchants on its own, so searching for a non-merchant lane is not enough.
+            const reserved = floor === merchantFloor ? merchantLane : -1;
+            kinds[[0, 1, 2].find(lane => lane !== reserved)] = 'battle';
+          }
+          if (kinds.every(k => k === 'battle')) kinds[2] = 'event';
         }
         lanes.forEach((lane, i) => {
           const kind = kinds[i],
@@ -256,9 +269,10 @@
       }
       if (next.length === 1 || node.floor === 0) node.next = next.map(n => n.id);
       else {
+        // Always offer a second road, so every stop in the middle of a chapter is a decision.
         node.next = [next.find(n => n.lane === node.lane).id];
         const adjacent = next.filter(n => Math.abs(n.lane - node.lane) === 1);
-        if (random(rng) < 0.72) node.next.push(pick(adjacent, rng).id);
+        node.next.push(pick(adjacent, rng).id);
         // A rest stop must be reachable before a boss, even from the central lane.
         if (node.floor === 6 && !node.next.some(id => next.find(n => n.id === id).kind === 'camp'))
           node.next.push(next.find(n => n.kind === 'camp').id);
