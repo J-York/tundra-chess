@@ -5,28 +5,32 @@ const E = GameEngine,
   PREFS = 'tundra-preferences-v2',
   RECORDS = 'tundra-records-v3';
 const audio = new ForestAudio();
-let state,
-  selected = null,
-  inspected = null,
-  activeTab = 'scout',
-  paused = false,
-  clock = null,
-  toastTimer,
-  dialogKind = null,
-  lastSaveTick = 0,
-  logs = [],
-  reportMetric = 'damage',
-  reportSide = 0,
-  displayedReport = null;
-let codexFaction = 'all',
-  codexRole = 'all';
-let newOrigin = 'forest',
-  newDifficulty = 'normal',
-  newChallenge = 'none',
-  mapSelected = null,
-  mapAct = 0,
-  rangeMode = 'attack',
-  previewAim = null;
+let state;
+// Everything the interface remembers between events, in one place instead of twenty-one
+// module-level flags. `state` stays separate: that is the expedition, not the view.
+const ui = {
+  selected: null, // companion the player is moving
+  inspected: null, // companion shown in the side panel
+  activeTab: 'scout',
+  rangeMode: 'attack', // 'attack' or 'skill' preview on the board
+  previewAim: null, // cell the skill preview points at
+  paused: false,
+  clock: null, // battle interval handle
+  lastSaveTick: 0,
+  toastTimer: null,
+  dialogKind: null, // which dialog is open, so the phase dialogs cannot be dismissed
+  logs: [],
+  reportMetric: 'damage',
+  reportSide: 0,
+  displayedReport: null,
+  codexFaction: 'all',
+  codexRole: 'all',
+  mapSelected: null, // node highlighted on the map, before confirming
+  mapAct: 0, // chapter the enlarged map is showing
+  newOrigin: 'forest', // pending choices in the new-expedition dialog
+  newDifficulty: 'normal',
+  newChallenge: 'none',
+};
 const prefs = { enabled: true, music: false, volume: 0.45, reduced: false, tip: true };
 let records = { wins: 0, best: 0, runs: [] };
 try {
@@ -73,7 +77,7 @@ function load() {
       const candidate = JSON.parse(raw);
       if (E.validate(candidate)) {
         state = candidate;
-        paused = state.phase === 'battle';
+        ui.paused = state.phase === 'battle';
         return;
       }
       // Retain an unreadable save for recovery, instead of overwriting the only copy.
@@ -85,13 +89,13 @@ function load() {
 function notify(message, error = false) {
   text('toast', message);
   $('toast').className = 'show' + (error ? ' error' : '');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => ($('toast').className = ''), 2600);
+  clearTimeout(ui.toastTimer);
+  ui.toastTimer = setTimeout(() => ($('toast').className = ''), 2600);
   if (error) audio.play('error');
 }
 function addLog(message, time = null) {
-  logs.unshift({ message, time });
-  logs = logs.slice(0, 45);
+  ui.logs.unshift({ message, time });
+  ui.logs = ui.logs.slice(0, 45);
   renderLog();
 }
 function action(result, sound = 'click', message = '') {
@@ -108,7 +112,7 @@ function action(result, sound = 'click', message = '') {
       }
   } else if (sound) audio.play(sound);
   if (message) notify(message);
-  selected = null;
+  ui.selected = null;
   save();
   render();
   return true;
@@ -135,7 +139,7 @@ function liveUnits() {
     : [...E.deployed(state).map(u => ({ ...u, side: 0 })), ...E.enemyRoster(state).map(u => ({ ...u, side: 1 }))];
 }
 function setTab(name) {
-  activeTab = name;
+  ui.activeTab = name;
   for (const tab of ['scout', 'unit', 'log']) {
     $('tab-' + tab).setAttribute('aria-selected', String(tab === name));
     $(tab + '-panel').hidden = tab !== name;
@@ -152,7 +156,7 @@ function renderRoute() {
 function selectedMapNode() {
   const current = E.currentNode(state),
     options = E.availableNodes(state);
-  return state.map.find(n => n.id === mapSelected) || options[0] || current;
+  return state.map.find(n => n.id === ui.mapSelected) || options[0] || current;
 }
 function nodeSummary(node) {
   if (E.isCombat(node))
@@ -230,10 +234,10 @@ function lootDescription(key) {
 }
 function showMap(act = E.currentNode(state).act) {
   if (selectedMapNode().act !== act)
-    mapSelected = (
+    ui.mapSelected = (
       E.availableNodes(state).find(n => n.act === act) || state.map.find(n => n.act === act && n.kind === 'boss')
     ).id;
-  mapAct = act;
+  ui.mapAct = act;
   const node = selectedMapNode(),
     reachable = E.availableNodes(state).some(n => n.id === node.id);
   showDialog(
@@ -244,12 +248,12 @@ function showMap(act = E.currentNode(state).act) {
 function enterSelectedNode() {
   const node = selectedMapNode();
   if (action(E.enterNode(state, node.id), 'move')) {
-    mapSelected = null;
-    selected = null;
-    inspected = null;
-    activeTab = 'scout';
+    ui.mapSelected = null;
+    ui.selected = null;
+    ui.inspected = null;
+    ui.activeTab = 'scout';
     $('modal').close();
-    dialogKind = null;
+    ui.dialogKind = null;
     render();
     notify(`抵达${node.kind === 'event' ? '未知事件' : node.name}`);
   }
@@ -304,7 +308,7 @@ function renderStatus() {
     `<button class="build-guide-button" id="build-guide">构筑手记 · ${E.buildAdvice(state).filter(b => b.active).length} 组搭配 ↗</button>`,
   );
   text('bag-count', state.bag.length + ' 件');
-  const own = state.units.some(u => u.id === selected);
+  const own = state.units.some(u => u.id === ui.selected);
   $('bag').innerHTML = state.bag.length
     ? state.bag
         .map(
@@ -375,7 +379,7 @@ function updateActors(rebuild = false) {
     el.style.transitionDuration = 0.24 / (prefs.speed || 1) + 's';
     el.tabIndex = u.dead ? -1 : 0;
     el.setAttribute('aria-hidden', String(!!u.dead));
-    el.classList.toggle('selected', selected === u.id || (inspected === u.id && activeTab === 'unit'));
+    el.classList.toggle('selected', ui.selected === u.id || (ui.inspected === u.id && ui.activeTab === 'unit'));
     el.classList.toggle('dead', !!u.dead);
     el.classList.toggle('shielded', u.shield > 0);
     el.classList.toggle('stunned', inCombat && u.stun > state.battle?.time);
@@ -430,7 +434,7 @@ function statusDetails(u) {
 }
 function renderCombatFocus() {
   const b = state.phase === 'battle' ? state.battle : null,
-    u = b?.units.find(v => v.id === inspected),
+    u = b?.units.find(v => v.id === ui.inspected),
     target =
       u && !u.dead && u.stun <= b.time
         ? b.units.find(v => v.id === u.targetId && !v.dead && !(v.stealthUntil > b.time))
@@ -457,8 +461,8 @@ function renderCombatFocus() {
   detail.innerHTML = `<strong>${u.dead ? '已阵亡' : target ? '当前目标 · ' + E.TYPES[target.type].name : u.ambushPending ? '等待潜伏结束' : u.stun > b.time ? '眩晕中，无法行动' : '当前没有可攻击目标'}</strong>${target ? `<small>${reason[u.targetReason] || '当前行动目标'} · 棋盘箭头指向该目标</small>` : ''}<p>${labels.length ? labels.join(' · ') : '无控制或防护状态'}</p>`;
 }
 function renderSelection() {
-  const u = liveUnits().find(v => v.id === inspected),
-    own = state.units.find(v => v.id === selected),
+  const u = liveUnits().find(v => v.id === ui.inspected),
+    own = state.units.find(v => v.id === ui.selected),
     prep = state.phase === 'prep',
     d = u && E.TYPES[u.type];
   const foes = u
@@ -466,8 +470,8 @@ function renderSelection() {
         .filter(v => v.side !== u.side)
         .sort((a, b) => E.distance(u.pos, a.pos) - E.distance(u.pos, b.pos))
     : [];
-  const aim = previewAim ?? foes[0]?.pos,
-    mode = rangeMode === 'skill' && prep && u;
+  const aim = ui.previewAim ?? foes[0]?.pos,
+    mode = ui.rangeMode === 'skill' && prep && u;
   let area = [];
   if (mode && u.pos !== null) {
     const all = Array.from({ length: 36 }, (_, i) => i);
@@ -510,7 +514,7 @@ function renderBench() {
   text('bench-count', `${bench.length} / ${E.BENCH} · 可拖动上阵`);
   $('bench').innerHTML = Array.from({ length: E.BENCH }, (_, i) => {
     const u = bench[i];
-    return `<button class="bench-slot ${u ? 'occupied' : ''} ${u?.id === selected ? 'selected' : ''}" data-bench="${u?.id || ''}" draggable="${!!u && E.canManage(state)}" aria-label="${u ? E.TYPES[u.type].name + ' 备战伙伴' : '空备战席'}">${u ? `${art(u.type)}<span class="stars">${'★'.repeat(u.star)}</span><span class="unit-name">${E.TYPES[u.type].name}</span>${u.item ? `<span class="equipment-mark">${E.ITEMS[u.item].icon}</span>` : ''}` : '·'}</button>`;
+    return `<button class="bench-slot ${u ? 'occupied' : ''} ${u?.id === ui.selected ? 'selected' : ''}" data-bench="${u?.id || ''}" draggable="${!!u && E.canManage(state)}" aria-label="${u ? E.TYPES[u.type].name + ' 备战伙伴' : '空备战席'}">${u ? `${art(u.type)}<span class="stars">${'★'.repeat(u.star)}</span><span class="unit-name">${E.TYPES[u.type].name}</span>${u.item ? `<span class="equipment-mark">${E.ITEMS[u.item].icon}</span>` : ''}` : '·'}</button>`;
   }).join('');
 }
 function renderShop() {
@@ -563,8 +567,8 @@ function renderControls() {
   $('fight').textContent = label;
   $('auto').disabled = !prep;
   $('pause').disabled = !fighting;
-  $('pause').textContent = paused ? '▶' : 'Ⅱ';
-  $('pause').setAttribute('aria-label', paused ? '继续战斗' : '暂停战斗');
+  $('pause').textContent = ui.paused ? '▶' : 'Ⅱ';
+  $('pause').setAttribute('aria-label', ui.paused ? '继续战斗' : '暂停战斗');
   const phases = {
     map: '规划路线',
     camp: '营地休整',
@@ -578,17 +582,17 @@ function renderControls() {
     lost: '旅途暂歇',
     prep: '准备阶段',
   };
-  text('phase', fighting ? (paused ? '战斗已暂停' : '自动战斗中') : phases[state.phase]);
+  text('phase', fighting ? (ui.paused ? '战斗已暂停' : '自动战斗中') : phases[state.phase]);
   $('phase').classList.toggle('fighting', fighting);
   text(
     'hint',
     fighting
-      ? paused
+      ? ui.paused
         ? '已暂停 · 点击伙伴查看目标与状态'
         : '技能会随法力自动释放'
       : state.phase === 'map'
         ? '地图亮边节点可前往'
-        : selected
+        : ui.selected
           ? '点击目标棋格或伙伴交换位置'
           : '伙伴保留 · 战后恢复生命',
   );
@@ -612,17 +616,17 @@ function primaryAction() {
   else if (state.phase === 'map') enterSelectedNode();
   else if (state.phase === 'merchant') {
     action(E.leaveMerchant(state), 'move');
-    mapSelected = null;
+    ui.mapSelected = null;
     render();
   } else if (state.phase === 'node-result') {
     action(E.continueNode(state), 'move');
-    mapSelected = null;
+    ui.mapSelected = null;
     render();
     showPhase();
   } else if (['won', 'lost'].includes(state.phase)) showEnd();
 }
 function renderInspector() {
-  const u = state.units.find(u => u.id === inspected) || E.enemyRoster(state).find(u => u.id === inspected);
+  const u = state.units.find(u => u.id === ui.inspected) || E.enemyRoster(state).find(u => u.id === ui.inspected);
   if (!u) {
     $('unit-panel').innerHTML = '<div class="unit-empty">❧<br>点击棋盘或备战席伙伴<br>查看技能、属性与装备。</div>';
     return;
@@ -636,12 +640,12 @@ function renderInspector() {
     st = state.phase === 'battle' && live ? live : base;
   const value = d.cost * 3 ** (u.star - 1);
   $('unit-panel').innerHTML =
-    `<div class="inspector-title"><span class="tiny muted">${own ? '我方伙伴' : '敌方侦察'}${u.pos === null ? ' · 备战席' : ''}</span><button class="quiet" id="clear-selection" title="取消选择">×</button></div><div class="inspect-art">${art(u.type)}</div><div class="inspect-name">${d.name}</div><div class="inspect-tags">${factionName(u.type)} · ${E.ROLES[d.role]}${!own ? ' · 敌方' : ''}</div><div class="inspect-stars">${'★'.repeat(u.star)}</div>${state.phase === 'battle' ? '<div class="live-status" id="live-status"></div>' : ''}<div class="stat-grid"><div><small>生命</small><b>${live && state.phase === 'battle' ? Math.ceil(live.hp) + '/' : ''}${st.maxHp}</b></div><div><small>攻击</small><b>${st.atk}</b></div><div><small>护甲</small><b>${st.armor}</b></div><div><small>攻击间隔</small><b>${st.interval.toFixed(2)}s</b></div><div><small>射程</small><b>${st.range} 格</b></div><div><small>技能强度</small><b>${Math.round(st.power * 100)}%</b></div></div><div class="item-equipped">${u.item ? `${E.ITEMS[u.item].icon} ${E.ITEMS[u.item].name}` : '◇ 尚未装备'}${own && prep ? '<button id="manage-equipment">更换装备</button>' : ''}</div>${state.phase === 'prep' && u.pos !== null ? `<div class="range-controls"><button data-range-mode="attack" class="${rangeMode === 'attack' ? 'active' : ''}">普攻射程</button><button data-range-mode="skill" class="${rangeMode === 'skill' ? 'active' : ''}">技能预览</button></div><p class="range-help">${['mage', 'frost', 'hexer', 'ranger', 'wavecaller', 'cinder', 'duskblade', 'sparkscout'].includes(u.type) ? '点击敌方棋格或敌人选择预览位置；超出金色射程时需先靠近。' : u.type === 'guard' ? '蓝色为嘲讽范围，战斗中影响范围内敌人。' : u.type === 'knight' ? '蓝色为自身与相邻友军的护盾范围。' : ['oakmaul', 'emberguard'].includes(u.type) ? '蓝色为相邻技能范围，需接近敌人后施放。' : ['healer', 'oracle', 'warden', 'pearl', 'tideguard', 'songbird'].includes(u.type) ? '蓝色为可选友军；技能自动按生命或法力选取。' : u.type === 'rogue' ? '蓝色为可能的突袭目标；血量和空位决定实际落点。' : u.type === 'hunter' ? '预览当前最远的两名敌人，目标随站位变化。' : u.type === 'flarebow' ? '预览当前最近的两名敌人，目标随站位变化。' : u.type === 'breaker' ? '蓝色为可选敌人；优先击破最厚护盾，潜伏敌人不能被选中。' : '蓝色为全场技能范围。'}</p>` : ''}<div class="skill-box"><strong>✧ ${d.skill}</strong><p>${d.desc}</p><small>100 法力自动释放 · 普攻 +21，受击 +6 · 初始 ${Math.round(base.mana)} 法力</small><small>${own && u.pos === null ? '预览假设上阵该伙伴后的羁绊；实际上阵人口仍受限制。' : '属性已计入当前羁绊、装备与遗物。'}</small></div>${u.item ? `<p class="equipped-desc">${E.ITEMS[u.item].desc}</p>` : ''}${own ? `<div class="inspect-actions"><button class="secondary" id="bench-unit" ${!prep || u.pos === null ? 'disabled' : ''}>撤至备战席</button><button class="danger" id="sell-unit" ${!prep ? 'disabled' : ''}>出售 ◈ ${value}</button></div>` : ''}<p class="flavor">“${d.flavor}”</p>`;
+    `<div class="inspector-title"><span class="tiny muted">${own ? '我方伙伴' : '敌方侦察'}${u.pos === null ? ' · 备战席' : ''}</span><button class="quiet" id="clear-selection" title="取消选择">×</button></div><div class="inspect-art">${art(u.type)}</div><div class="inspect-name">${d.name}</div><div class="inspect-tags">${factionName(u.type)} · ${E.ROLES[d.role]}${!own ? ' · 敌方' : ''}</div><div class="inspect-stars">${'★'.repeat(u.star)}</div>${state.phase === 'battle' ? '<div class="live-status" id="live-status"></div>' : ''}<div class="stat-grid"><div><small>生命</small><b>${live && state.phase === 'battle' ? Math.ceil(live.hp) + '/' : ''}${st.maxHp}</b></div><div><small>攻击</small><b>${st.atk}</b></div><div><small>护甲</small><b>${st.armor}</b></div><div><small>攻击间隔</small><b>${st.interval.toFixed(2)}s</b></div><div><small>射程</small><b>${st.range} 格</b></div><div><small>技能强度</small><b>${Math.round(st.power * 100)}%</b></div></div><div class="item-equipped">${u.item ? `${E.ITEMS[u.item].icon} ${E.ITEMS[u.item].name}` : '◇ 尚未装备'}${own && prep ? '<button id="manage-equipment">更换装备</button>' : ''}</div>${state.phase === 'prep' && u.pos !== null ? `<div class="range-controls"><button data-range-mode="attack" class="${ui.rangeMode === 'attack' ? 'active' : ''}">普攻射程</button><button data-range-mode="skill" class="${ui.rangeMode === 'skill' ? 'active' : ''}">技能预览</button></div><p class="range-help">${['mage', 'frost', 'hexer', 'ranger', 'wavecaller', 'cinder', 'duskblade', 'sparkscout'].includes(u.type) ? '点击敌方棋格或敌人选择预览位置；超出金色射程时需先靠近。' : u.type === 'guard' ? '蓝色为嘲讽范围，战斗中影响范围内敌人。' : u.type === 'knight' ? '蓝色为自身与相邻友军的护盾范围。' : ['oakmaul', 'emberguard'].includes(u.type) ? '蓝色为相邻技能范围，需接近敌人后施放。' : ['healer', 'oracle', 'warden', 'pearl', 'tideguard', 'songbird'].includes(u.type) ? '蓝色为可选友军；技能自动按生命或法力选取。' : u.type === 'rogue' ? '蓝色为可能的突袭目标；血量和空位决定实际落点。' : u.type === 'hunter' ? '预览当前最远的两名敌人，目标随站位变化。' : u.type === 'flarebow' ? '预览当前最近的两名敌人，目标随站位变化。' : u.type === 'breaker' ? '蓝色为可选敌人；优先击破最厚护盾，潜伏敌人不能被选中。' : '蓝色为全场技能范围。'}</p>` : ''}<div class="skill-box"><strong>✧ ${d.skill}</strong><p>${d.desc}</p><small>100 法力自动释放 · 普攻 +21，受击 +6 · 初始 ${Math.round(base.mana)} 法力</small><small>${own && u.pos === null ? '预览假设上阵该伙伴后的羁绊；实际上阵人口仍受限制。' : '属性已计入当前羁绊、装备与遗物。'}</small></div>${u.item ? `<p class="equipped-desc">${E.ITEMS[u.item].desc}</p>` : ''}${own ? `<div class="inspect-actions"><button class="secondary" id="bench-unit" ${!prep || u.pos === null ? 'disabled' : ''}>撤至备战席</button><button class="danger" id="sell-unit" ${!prep ? 'disabled' : ''}>出售 ◈ ${value}</button></div>` : ''}<p class="flavor">“${d.flavor}”</p>`;
   renderCombatFocus();
 }
 function renderLog() {
-  $('log').innerHTML = logs.length
-    ? logs
+  $('log').innerHTML = ui.logs.length
+    ? ui.logs
         .map(l => `<div>${l.time !== null ? `<time>${l.time.toFixed(1)}s</time>` : ''}${escapeHTML(l.message)}</div>`)
         .join('')
     : '<p class="empty-note">先调整队伍，森林在等你出发。</p>';
@@ -658,7 +662,7 @@ function render() {
   updateActors(true);
   renderSelection();
   renderControls();
-  setTab(activeTab);
+  setTab(ui.activeTab);
   text('stage-label', `第 ${node.act + 1} 章 / ${node.floor + 1} · 9`);
   text('stage-title', node.name);
   $('arena').className = 'arena theme-' + node.theme;
@@ -685,60 +689,60 @@ function render() {
 function selectActor(id) {
   const own = state.units.find(u => u.id === id);
   if (!E.canManage(state)) {
-    inspected = id;
+    ui.inspected = id;
     setTab('unit');
     updateActors();
     return;
   }
   const enemy = E.enemyRoster(state).find(u => u.id === id);
-  if (rangeMode === 'skill' && selected && enemy) {
-    previewAim = enemy.pos;
+  if (ui.rangeMode === 'skill' && ui.selected && enemy) {
+    ui.previewAim = enemy.pos;
     renderSelection();
     return;
   }
-  if (inspected !== id) {
-    previewAim = null;
-    rangeMode = 'attack';
+  if (ui.inspected !== id) {
+    ui.previewAim = null;
+    ui.rangeMode = 'attack';
   }
-  if (selected === id) {
-    selected = null;
-    inspected = id;
+  if (ui.selected === id) {
+    ui.selected = null;
+    ui.inspected = id;
     render();
     return;
   }
-  if (selected && own && own.pos !== null && selected !== id) {
-    const source = state.units.find(u => u.id === selected);
+  if (ui.selected && own && own.pos !== null && ui.selected !== id) {
+    const source = state.units.find(u => u.id === ui.selected);
     if (source) {
       const movedId = source.id;
       action(E.move(state, source.id, own.pos), 'move');
-      inspected = movedId;
+      ui.inspected = movedId;
       setTab('unit');
       return;
     }
   }
-  selected = own ? id : null;
-  inspected = id;
-  activeTab = 'unit';
+  ui.selected = own ? id : null;
+  ui.inspected = id;
+  ui.activeTab = 'unit';
   audio.play('click');
   render();
 }
 function moveTo(pos) {
-  if (rangeMode === 'skill' && selected && pos !== null && pos < E.HOME) {
-    previewAim = pos;
+  if (ui.rangeMode === 'skill' && ui.selected && pos !== null && pos < E.HOME) {
+    ui.previewAim = pos;
     renderSelection();
     return;
   }
-  if (!selected) {
+  if (!ui.selected) {
     if (pos !== null) {
       const u = state.units.find(u => u.pos === pos);
       if (u) selectActor(u.id);
     } else notify('先选择一位场上的伙伴');
     return;
   }
-  const id = selected;
+  const id = ui.selected;
   if (action(E.move(state, id, pos), 'move')) {
-    selected = id;
-    inspected = id;
+    ui.selected = id;
+    ui.inspected = id;
     render();
   }
 }
@@ -758,12 +762,12 @@ function transient(el, frames, duration, delay = 0) {
 }
 function syncVisuals() {
   const arena = $('arena');
-  arena.classList.toggle('visual-paused', paused);
+  arena.classList.toggle('visual-paused', ui.paused);
   arena.style.setProperty('--combat-speed', prefs.speed || 1);
   for (const anim of arena.getAnimations({ subtree: true })) {
     if (reducedMotion()) {
       if (anim.effect?.target?.closest('#effects,#floaters')) anim.effect.target.remove();
-    } else if (paused) anim.pause();
+    } else if (ui.paused) anim.pause();
     else if (anim.playState === 'paused') anim.play();
   }
 }
@@ -945,22 +949,22 @@ function animateEvents(events) {
   }
 }
 function stopClock() {
-  clearInterval(clock);
-  clock = null;
+  clearInterval(ui.clock);
+  ui.clock = null;
 }
 function startClock() {
   stopClock();
   syncVisuals();
-  if (state.phase === 'battle' && !paused) clock = setInterval(battleTick, 100 / (prefs.speed || 1));
+  if (state.phase === 'battle' && !ui.paused) ui.clock = setInterval(battleTick, 100 / (prefs.speed || 1));
 }
 function beginBattle() {
-  lastSaveTick = 0;
+  ui.lastSaveTick = 0;
   if (action(E.createBattle(state), 'start')) {
-    selected = null;
-    inspected = null;
-    activeTab = 'log';
-    paused = false;
-    logs = [];
+    ui.selected = null;
+    ui.inspected = null;
+    ui.activeTab = 'log';
+    ui.paused = false;
+    ui.logs = [];
     addLog(`第 ${E.currentNode(state).act + 1} 章 · ${E.currentNode(state).name}，战斗开始。`);
     render();
     animateEvents(state.battle.events);
@@ -968,7 +972,7 @@ function beginBattle() {
   }
 }
 function battleTick() {
-  if (paused || state.phase !== 'battle') return;
+  if (ui.paused || state.phase !== 'battle') return;
   const result = E.step(state.battle);
   updateActors();
   animateEvents(state.battle.events);
@@ -985,10 +989,10 @@ function battleTick() {
     `${state.battle.time.toFixed(1)} 秒 · ${state.battle.enrage ? '加时：伤害 +60%，治疗减半' : '50 秒后进入加时'}`,
   );
   $('battle-progress-bar').style.width = Math.min(100, (state.battle.time / 80) * 100) + '%';
-  if (state.battle.tick - lastSaveTick >= 10) {
-    lastSaveTick = state.battle.tick;
+  if (state.battle.tick - ui.lastSaveTick >= 10) {
+    ui.lastSaveTick = state.battle.tick;
     save();
-    if (activeTab === 'unit') renderInspector();
+    if (ui.activeTab === 'unit') renderInspector();
   }
   if (result) {
     stopClock();
@@ -1006,9 +1010,9 @@ function battleTick() {
 }
 function togglePause() {
   if (state.phase !== 'battle') return;
-  paused = !paused;
+  ui.paused = !ui.paused;
   audio.play('click');
-  if (paused) {
+  if (ui.paused) {
     stopClock();
     save();
   } else startClock();
@@ -1017,7 +1021,7 @@ function togglePause() {
 }
 function pauseForDialog() {
   if (state.phase === 'battle') {
-    paused = true;
+    ui.paused = true;
     stopClock();
     syncVisuals();
     save();
@@ -1026,46 +1030,46 @@ function pauseForDialog() {
 }
 function showDialog(kind, html) {
   pauseForDialog();
-  dialogKind = kind;
+  ui.dialogKind = kind;
   $('modal').dataset.kind = kind;
   $('modal-content').innerHTML = html;
   if (!$('modal').open) $('modal').showModal();
   $('modal-content').querySelector('button:not(:disabled)')?.focus({ preventScroll: true });
 }
 function closeDialog() {
-  if (['result', 'reward'].includes(state.phase) && ['result', 'reward'].includes(dialogKind)) return;
-  const previous = dialogKind;
+  if (['result', 'reward'].includes(state.phase) && ['result', 'reward'].includes(ui.dialogKind)) return;
+  const previous = ui.dialogKind;
   $('modal').close();
-  dialogKind = null;
+  ui.dialogKind = null;
   if (previous === 'new') showPhase();
 }
 function heading(title, subtitle = '', eyebrow = 'FIELD NOTES', close = true) {
   return `${close ? '<button class="dialog-close" data-close aria-label="关闭窗口">×</button>' : ''}<div class="eyebrow">${eyebrow}</div><h2 id="modal-title">${title}</h2>${subtitle ? `<p>${subtitle}</p>` : ''}`;
 }
 function reportTable() {
-  const roster = displayedReport.units
-      .filter(u => u.side === reportSide)
-      .sort((a, b) => b[reportMetric] - a[reportMetric]),
-    max = Math.max(1, ...roster.map(u => u[reportMetric]));
+  const roster = ui.displayedReport.units
+      .filter(u => u.side === ui.reportSide)
+      .sort((a, b) => b[ui.reportMetric] - a[ui.reportMetric]),
+    max = Math.max(1, ...roster.map(u => u[ui.reportMetric]));
   return roster
     .map(
       u =>
-        `<div class="report-row ${u.side ? 'enemy' : ''}">${art(u.type)}<span>${E.TYPES[u.type].name}<small class="gold"> ${'★'.repeat(u.star)}</small>${displayedReport.telemetryVersion === 1 ? `<small class="report-survival">${u.deathAt === null ? '存活至结束' : u.deathAt.toFixed(1) + 's 阵亡'} · 施法 ${u.casts}</small>` : ''}</span><div class="bar"><i style="width:${(u[reportMetric] / max) * 100}%"></i></div><span class="value">${u[reportMetric]}</span></div>`,
+        `<div class="report-row ${u.side ? 'enemy' : ''}">${art(u.type)}<span>${E.TYPES[u.type].name}<small class="gold"> ${'★'.repeat(u.star)}</small>${ui.displayedReport.telemetryVersion === 1 ? `<small class="report-survival">${u.deathAt === null ? '存活至结束' : u.deathAt.toFixed(1) + 's 阵亡'} · 施法 ${u.casts}</small>` : ''}</span><div class="bar"><i style="width:${(u[ui.reportMetric] / max) * 100}%"></i></div><span class="value">${u[ui.reportMetric]}</span></div>`,
     )
     .join('');
 }
 function reportSummary() {
-  const r = displayedReport,
-    info = E.reportInsights(r, reportSide);
+  const r = ui.displayedReport,
+    info = E.reportInsights(r, ui.reportSide);
   if (!info) return '<p class="report-note">这份旧战报没有记录阵亡时间与承伤类型；新战斗会显示详细分析。</p>';
-  const enemies = r.units.filter(u => u.side !== reportSide),
+  const enemies = r.units.filter(u => u.side !== ui.reportSide),
     remaining = enemies.filter(u => u.alive).length;
-  return `<div class="report-facts"><div><small>首位阵亡</small><strong>${info.first ? info.first.deathAt.toFixed(1) + 's' : '无人阵亡'}</strong><span>${info.first ? E.TYPES[info.first.type].name : '全员存活至结束'}</span></div><div><small>守卫平均存活</small><strong>${info.guardTime === null ? '未上阵' : info.guardTime.toFixed(1) + 's'}</strong><span>存活者按本场时长统计</span></div><div><small>${reportSide ? '我方' : '敌方'}剩余</small><strong>${remaining} / ${enemies.length}</strong><span>${info.received ? `本侧承伤：物理 ${Math.round(((info.received - info.magic - info.trueDamage) / info.received) * 100)}% · 魔法 ${Math.round((info.magic / info.received) * 100)}% · 真实 ${Math.round((info.trueDamage / info.received) * 100)}%` : '本侧未损失生命'}</span></div></div>${!reportSide && info.advice.length ? `<details class="report-advice" ${!r.won ? 'open' : ''}><summary>下一场可以怎样调整 · ${info.advice.length} 条</summary><div>${info.advice.map(a => `<article><strong>${a.title}</strong><p>${a.evidence}</p><small>${a.action}</small></article>`).join('')}</div></details>` : ''}`;
+  return `<div class="report-facts"><div><small>首位阵亡</small><strong>${info.first ? info.first.deathAt.toFixed(1) + 's' : '无人阵亡'}</strong><span>${info.first ? E.TYPES[info.first.type].name : '全员存活至结束'}</span></div><div><small>守卫平均存活</small><strong>${info.guardTime === null ? '未上阵' : info.guardTime.toFixed(1) + 's'}</strong><span>存活者按本场时长统计</span></div><div><small>${ui.reportSide ? '我方' : '敌方'}剩余</small><strong>${remaining} / ${enemies.length}</strong><span>${info.received ? `本侧承伤：物理 ${Math.round(((info.received - info.magic - info.trueDamage) / info.received) * 100)}% · 魔法 ${Math.round((info.magic / info.received) * 100)}% · 真实 ${Math.round((info.trueDamage / info.received) * 100)}%` : '本侧未损失生命'}</span></div></div>${!ui.reportSide && info.advice.length ? `<details class="report-advice" ${!r.won ? 'open' : ''}><summary>下一场可以怎样调整 · ${info.advice.length} 条</summary><div>${info.advice.map(a => `<article><strong>${a.title}</strong><p>${a.evidence}</p><small>${a.action}</small></article>`).join('')}</div></details>` : ''}`;
 }
 function showReport(report, required = false) {
-  displayedReport = report;
-  reportMetric = 'damage';
-  reportSide = 0;
+  ui.displayedReport = report;
+  ui.reportMetric = 'damage';
+  ui.reportSide = 0;
   const detail = report.detail;
   const label =
     state.life <= 0
@@ -1145,9 +1149,9 @@ function showPhase() {
   else if (['won', 'lost'].includes(state.phase)) showEnd();
 }
 function showNewRun(config = null) {
-  newOrigin = config?.origin || state.origin;
-  newDifficulty = config?.difficulty || state.difficulty;
-  newChallenge = config?.challenge || state.challenge || 'none';
+  ui.newOrigin = config?.origin || state.origin;
+  ui.newDifficulty = config?.difficulty || state.difficulty;
+  ui.newChallenge = config?.challenge || state.challenge || 'none';
   showDialog(
     'new',
     `${heading('每一段传奇，都有新的起点。', '选择同行的伙伴与旅途难度。', 'A NEW EXPEDITION')}<div class="choices origin-choices">${Object.entries(
@@ -1155,22 +1159,22 @@ function showNewRun(config = null) {
     )
       .map(
         ([id, o]) =>
-          `<button class="choice ${id === newOrigin ? 'selected' : ''}" data-origin="${id}"><div class="origin-art">${o.types.map(art).join('')}</div><strong>${o.icon} ${o.name}</strong><small>${o.desc}<br>初始金币 ${o.gold} · 橡木圆盾 ×1</small></button>`,
+          `<button class="choice ${id === ui.newOrigin ? 'selected' : ''}" data-origin="${id}"><div class="origin-art">${o.types.map(art).join('')}</div><strong>${o.icon} ${o.name}</strong><small>${o.desc}<br>初始金币 ${o.gold} · 橡木圆盾 ×1</small></button>`,
       )
       .join('')}</div><div class="difficulty-options">${Object.entries(E.DIFFICULTIES)
       .map(
         ([id, d]) =>
-          `<button class="difficulty-option ${id === newDifficulty ? 'selected' : ''}" data-difficulty="${id}"><strong>${d.name}</strong><small>${d.desc}</small></button>`,
+          `<button class="difficulty-option ${id === ui.newDifficulty ? 'selected' : ''}" data-difficulty="${id}"><strong>${d.name}</strong><small>${d.desc}</small></button>`,
       )
       .join(
         '',
       )}</div><label class="challenge-field" for="run-challenge">特殊挑战<select id="run-challenge">${Object.entries(
       E.CHALLENGES,
     )
-      .map(([id, c]) => `<option value="${id}" ${id === newChallenge ? 'selected' : ''}>${c.name}</option>`)
+      .map(([id, c]) => `<option value="${id}" ${id === ui.newChallenge ? 'selected' : ''}>${c.name}</option>`)
       .join(
         '',
-      )}</select><small id="challenge-description">${E.CHALLENGES[newChallenge].desc}</small></label><div class="seed-field"><label for="run-seed">地图种子 <small>留空随机生成</small></label><div><input id="run-seed" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="1 — 4294967295" aria-describedby="seed-help" value="${config?.seed ?? ''}"><button class="secondary" id="current-seed">沿用当前种子</button></div><p id="seed-help">相同种子、开局与难度可复现起点；不同招募、路线与布阵会改变后续结果。</p></div><p class="new-run-note">${config ? '配置已填入，当前远征还未改变。' : ''}${config?.rules && config.rules !== E.RULESET ? '该记录来自旧规则版本，重玩会按当前规则生成。' : ''}确认出发后才替换当前进度，累计凯旋记录会保留。</p><div class="modal-actions"><button class="quiet" data-close>继续当前旅途</button><button class="primary" id="confirm-new">准备好，出发 →</button></div>`,
+      )}</select><small id="challenge-description">${E.CHALLENGES[ui.newChallenge].desc}</small></label><div class="seed-field"><label for="run-seed">地图种子 <small>留空随机生成</small></label><div><input id="run-seed" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="1 — 4294967295" aria-describedby="seed-help" value="${config?.seed ?? ''}"><button class="secondary" id="current-seed">沿用当前种子</button></div><p id="seed-help">相同种子、开局与难度可复现起点；不同招募、路线与布阵会改变后续结果。</p></div><p class="new-run-note">${config ? '配置已填入，当前远征还未改变。' : ''}${config?.rules && config.rules !== E.RULESET ? '该记录来自旧规则版本，重玩会按当前规则生成。' : ''}确认出发后才替换当前进度，累计凯旋记录会保留。</p><div class="modal-actions"><button class="quiet" data-close>继续当前旅途</button><button class="primary" id="confirm-new">准备好，出发 →</button></div>`,
   );
 }
 function newGame() {
@@ -1183,19 +1187,19 @@ function newGame() {
   stopClock();
   state = E.newRun({
     ...(parsed.seed !== null ? { seed: parsed.seed } : {}),
-    origin: newOrigin,
-    difficulty: newDifficulty,
-    challenge: newChallenge,
+    origin: ui.newOrigin,
+    difficulty: ui.newDifficulty,
+    challenge: ui.newChallenge,
   });
-  selected = null;
-  inspected = null;
-  mapSelected = null;
-  paused = false;
-  logs = [];
-  lastSaveTick = 0;
-  activeTab = 'scout';
+  ui.selected = null;
+  ui.inspected = null;
+  ui.mapSelected = null;
+  ui.paused = false;
+  ui.logs = [];
+  ui.lastSaveTick = 0;
+  ui.activeTab = 'scout';
   $('modal').close();
-  dialogKind = null;
+  ui.dialogKind = null;
   $('effects').innerHTML = '';
   $('floaters').innerHTML = '';
   save();
@@ -1250,8 +1254,8 @@ function showCodex(type = null, enemies = false) {
       : Object.keys(E.TYPES).filter(
           t =>
             E.TYPES[t].cost &&
-            (codexFaction === 'all' || E.hasFaction(t, codexFaction)) &&
-            (codexRole === 'all' || E.TYPES[t].role === codexRole),
+            (ui.codexFaction === 'all' || E.hasFaction(t, ui.codexFaction)) &&
+            (ui.codexRole === 'all' || E.TYPES[t].role === ui.codexRole),
         );
   showDialog(
     'codex',
@@ -1260,13 +1264,13 @@ function showCodex(type = null, enemies = false) {
         ? `<div class="codex-filters"><label>阵营<select id="codex-faction"><option value="all">所有阵营</option>${Object.entries(
             E.FACTIONS,
           )
-            .map(([id, f]) => `<option value="${id}" ${codexFaction === id ? 'selected' : ''}>${f.name}</option>`)
+            .map(([id, f]) => `<option value="${id}" ${ui.codexFaction === id ? 'selected' : ''}>${f.name}</option>`)
             .join(
               '',
             )}</select></label><label>职业<select id="codex-role"><option value="all">所有职业</option>${Object.entries(
             E.ROLES,
           )
-            .map(([id, r]) => `<option value="${id}" ${codexRole === id ? 'selected' : ''}>${r}</option>`)
+            .map(([id, r]) => `<option value="${id}" ${ui.codexRole === id ? 'selected' : ''}>${r}</option>`)
             .join(
               '',
             )}</select></label><small>显示 ${types.length} / 22 位</small></div><p class="tiny muted">阵营加成与职业羁绊可以交叉搭配；双阵营伙伴会同时计入两边。每个角色仍只有一个主动技能。</p>`
@@ -1325,9 +1329,9 @@ function equipmentDelta(u, item) {
   );
 }
 function showEquipment() {
-  const u = state.units.find(u => u.id === inspected);
+  const u = state.units.find(u => u.id === ui.inspected);
   if (!u || !E.canManage(state)) return;
-  selected = u.id;
+  ui.selected = u.id;
   showDialog(
     'equipment',
     `${heading('为' + E.TYPES[u.type].name + '准备行装', '按当前羁绊与遗物比较更换前后属性。每人一件，原装备返回行囊。', 'EQUIPMENT')}<div class="current-equipment"><strong>当前 · ${u.item ? E.ITEMS[u.item].name : '未装备'}</strong><p>${u.item ? E.ITEMS[u.item].desc : '下方显示更换后的属性，点击即可穿戴。'}</p></div><div class="choices equipment-choices">${state.bag.map((id, i) => `<button class="choice" data-equip="${i}"><span class="choice-icon">${E.ITEMS[id].icon}</span><strong>${E.ITEMS[id].name}</strong><small>${E.ITEMS[id].desc}</small><div class="equipment-deltas">${equipmentDelta(u, id)}</div></button>`).join('')}</div>${!state.bag.length ? '<p class="report-note">行囊暂时没有备用装备。普通战斗偶尔掉落装备，商人与事件也能获得装备。</p>' : ''}<div class="modal-actions">${u.item ? '<button class="secondary" id="unequip">卸下当前装备</button>' : ''}<button class="primary" data-close>继续布阵</button></div>`,
@@ -1382,17 +1386,17 @@ document.addEventListener('click', event => {
     return;
   }
   if (d.equip !== undefined) {
-    const id = selected || (activeTab === 'unit' ? inspected : null);
+    const id = ui.selected || (ui.activeTab === 'unit' ? ui.inspected : null);
     if (!id || !state.units.some(u => u.id === id)) {
       notify('先在棋盘或备战席选择一位伙伴，再点击装备。');
       return;
     }
     if (action(E.equip(state, id, Number(d.equip)), 'equip', '装备已穿戴，原装备会回到行囊。')) {
-      selected = id;
-      inspected = id;
-      if (dialogKind === 'equipment') {
+      ui.selected = id;
+      ui.inspected = id;
+      if (ui.dialogKind === 'equipment') {
         $('modal').close();
-        dialogKind = null;
+        ui.dialogKind = null;
       }
       render();
       setTab('unit');
@@ -1400,7 +1404,7 @@ document.addEventListener('click', event => {
     return;
   }
   if (d.rangeMode) {
-    rangeMode = d.rangeMode;
+    ui.rangeMode = d.rangeMode;
     renderInspector();
     renderSelection();
     return;
@@ -1411,8 +1415,8 @@ document.addEventListener('click', event => {
     return;
   }
   if (d.inspect) {
-    selected = null;
-    inspected = d.inspect;
+    ui.selected = null;
+    ui.inspected = d.inspect;
     setTab('unit');
     updateActors();
     renderSelection();
@@ -1433,16 +1437,16 @@ document.addEventListener('click', event => {
   if (d.reward) {
     if (action(E.takeReward(state, d.reward), 'reward')) {
       $('modal').close();
-      dialogKind = null;
-      mapSelected = null;
+      ui.dialogKind = null;
+      ui.mapSelected = null;
       render();
       showPhase();
     }
     return;
   }
   if (d.mapNode) {
-    mapSelected = d.mapNode;
-    if (dialogKind === 'map') showMap(mapAct);
+    ui.mapSelected = d.mapNode;
+    if (ui.dialogKind === 'map') showMap(ui.mapAct);
     else {
       renderScouting();
       renderTravel();
@@ -1462,7 +1466,7 @@ document.addEventListener('click', event => {
   if (d.forge) {
     if (action(E.camp(state, 'forge', d.forge), 'equip')) {
       $('modal').close();
-      dialogKind = null;
+      ui.dialogKind = null;
     }
     return;
   }
@@ -1484,26 +1488,26 @@ document.addEventListener('click', event => {
     return;
   }
   if (d.origin) {
-    newOrigin = d.origin;
+    ui.newOrigin = d.origin;
     document
       .querySelectorAll('[data-origin]')
-      .forEach(b => b.classList.toggle('selected', b.dataset.origin === newOrigin));
+      .forEach(b => b.classList.toggle('selected', b.dataset.origin === ui.newOrigin));
     audio.play('click');
     return;
   }
   if (d.difficulty) {
-    newDifficulty = d.difficulty;
+    ui.newDifficulty = d.difficulty;
     document
       .querySelectorAll('[data-difficulty]')
-      .forEach(b => b.classList.toggle('selected', b.dataset.difficulty === newDifficulty));
+      .forEach(b => b.classList.toggle('selected', b.dataset.difficulty === ui.newDifficulty));
     audio.play('click');
     return;
   }
   if (d.metric) {
-    reportMetric = d.metric;
+    ui.reportMetric = d.metric;
     document
       .querySelectorAll('[data-metric]')
-      .forEach(b => b.classList.toggle('active', b.dataset.metric === reportMetric));
+      .forEach(b => b.classList.toggle('active', b.dataset.metric === ui.reportMetric));
     $('report-table').innerHTML = reportTable();
     return;
   }
@@ -1528,8 +1532,8 @@ document.addEventListener('click', event => {
     case 'skip-reward':
       if (action(E.skipReward(state), 'move')) {
         $('modal').close();
-        dialogKind = null;
-        mapSelected = null;
+        ui.dialogKind = null;
+        ui.mapSelected = null;
         render();
         showPhase();
       }
@@ -1584,8 +1588,8 @@ document.addEventListener('click', event => {
       showGuide();
       break;
     case 'all-codex':
-      codexFaction = 'all';
-      codexRole = 'all';
+      ui.codexFaction = 'all';
+      ui.codexRole = 'all';
       showCodex();
       break;
     case 'build-guide':
@@ -1614,27 +1618,27 @@ document.addEventListener('click', event => {
       $('onboarding').hidden = true;
       break;
     case 'clear-selection':
-      selected = null;
-      inspected = null;
+      ui.selected = null;
+      ui.inspected = null;
       render();
       break;
     case 'manage-equipment':
       showEquipment();
       break;
     case 'unequip':
-      if (action(E.equip(state, inspected, -1), 'equip')) {
+      if (action(E.equip(state, ui.inspected, -1), 'equip')) {
         $('modal').close();
-        dialogKind = null;
+        ui.dialogKind = null;
       }
       break;
     case 'bench-unit':
-      action(E.move(state, inspected, null), 'move');
+      action(E.move(state, ui.inspected, null), 'move');
       break;
     case 'sell-unit': {
-      const u = state.units.find(u => u.id === inspected);
+      const u = state.units.find(u => u.id === ui.inspected);
       if (!u) break;
       if (action(E.sell(state, u.id), 'buy', `${E.TYPES[u.type].name} 已离队，装备返回行囊。`)) {
-        inspected = null;
+        ui.inspected = null;
         renderInspector();
       }
       break;
@@ -1642,8 +1646,8 @@ document.addEventListener('click', event => {
     case 'continue-result':
       if (action(E.continueResult(state), null)) {
         $('modal').close();
-        dialogKind = null;
-        mapSelected = null;
+        ui.dialogKind = null;
+        ui.mapSelected = null;
         render();
         showPhase();
       }
@@ -1652,8 +1656,8 @@ document.addEventListener('click', event => {
       if (state.report) showReport(state.report);
       break;
     case 'report-side':
-      reportSide = 1 - reportSide;
-      text('report-side', reportSide ? '敌方 ⇄' : '我方 ⇄');
+      ui.reportSide = 1 - ui.reportSide;
+      text('report-side', ui.reportSide ? '敌方 ⇄' : '我方 ⇄');
       $('report-table').innerHTML = reportTable();
       $('report-summary').innerHTML = reportSummary();
       break;
@@ -1662,18 +1666,18 @@ document.addEventListener('click', event => {
 document.addEventListener('input', event => {
   const el = event.target;
   if (el.id === 'codex-faction') {
-    codexFaction = el.value;
+    ui.codexFaction = el.value;
     showCodex();
     $('codex-faction').focus({ preventScroll: true });
   }
   if (el.id === 'codex-role') {
-    codexRole = el.value;
+    ui.codexRole = el.value;
     showCodex();
     $('codex-role').focus({ preventScroll: true });
   }
   if (el.id === 'run-challenge' && Object.hasOwn(E.CHALLENGES, el.value)) {
-    newChallenge = el.value;
-    text('challenge-description', E.CHALLENGES[newChallenge].desc);
+    ui.newChallenge = el.value;
+    text('challenge-description', E.CHALLENGES[ui.newChallenge].desc);
   }
   if (el.id === 'pref-volume') {
     prefs.volume = Number(el.value) / 100;
@@ -1703,8 +1707,8 @@ document.addEventListener('dragstart', event => {
     event.preventDefault();
     return;
   }
-  selected = id;
-  inspected = id;
+  ui.selected = id;
+  ui.inspected = id;
   event.dataTransfer.setData('text/plain', id);
   event.dataTransfer.effectAllowed = 'move';
   renderSelection();
@@ -1722,7 +1726,7 @@ document.addEventListener('drop', event => {
   event.preventDefault();
   const id = event.dataTransfer.getData('text/plain');
   if (!state.units.some(u => u.id === id)) return;
-  selected = id;
+  ui.selected = id;
   if (el.id === 'bench') moveTo(null);
   else if (el.dataset.cell !== undefined) moveTo(Number(el.dataset.cell));
   else {
@@ -1735,8 +1739,8 @@ document.addEventListener('keydown', event => {
   if (event.ctrlKey || event.metaKey || event.altKey || ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName))
     return;
   if (event.key === 'Escape' && !$('modal').open) {
-    selected = null;
-    inspected = null;
+    ui.selected = null;
+    ui.inspected = null;
     render();
     return;
   }
@@ -1765,7 +1769,7 @@ $('modal').addEventListener('cancel', event => {
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     if (state.phase === 'battle') {
-      paused = true;
+      ui.paused = true;
       stopClock();
       syncVisuals();
       save();

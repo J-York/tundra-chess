@@ -317,9 +317,9 @@ async function main() {
     const equipped = await evaluate(`(() => {
       const deployed = state.units.find(u => u.pos !== null);
       if (!deployed) return 'nobody deployed';
-      inspected = deployed.id;
-      setTab('unit');
-      renderInspector();
+      // Select through the board the way a player does, rather than reaching into the page.
+      document.querySelector('[data-actor="' + deployed.id + '"]').click();
+      document.getElementById('tab-unit').click();
       const manage = document.getElementById('manage-equipment');
       if (!manage) return 'no equipment button';
       manage.click();
