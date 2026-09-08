@@ -1,0 +1,5 @@
+# Bulk reformat; skip it in blame with:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# style: format the whole codebase with prettier
+b539a85831af62a98fa78d8290432580af3a1bd6
