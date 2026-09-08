@@ -12,5 +12,7 @@
   "game.js",
   "audio.js",
   "art.js",
-  "assets/forest.webp"
+  "assets/chapter-forest.webp",
+  "assets/chapter-ruin.webp",
+  "assets/chapter-moon.webp"
 ]

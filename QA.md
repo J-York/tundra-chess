@@ -266,3 +266,14 @@
 转换由 JavaScript 解析器判定表达式边界，再把每个文件反向还原为赋值形式并要求与输入逐字节一致。
 
 三步改动的界面指纹全程不变：`d8713a0949720d81da859a05ad8edc85040d58a8b06db83eb4a62664240bce7c`。`npm run verify` 现在以浏览器验收收尾，规则检查 76 项。
+
+## 2026-09-08 章节美术重构
+
+- 三张独立手绘场景已接入实际节点主题：苔林边境、沉星回廊、长夜之心。场景路径集中在 CSS 变量；移除旧滤色，使用各章原生配色和暗角，终局复用月夜场景。
+- PNG 原图保留，发布只包含三张 1536×1024 WebP，总计 947174 字节，较 PNG 减少约 89.7%。旧背景保留在源码，不进入新发布包。
+- `npm run check`、`npm run lint`、`npm run format:check` 通过；`npm test` 76 项通过。
+- `CHROME_PATH='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' npm run browser-test -- --art-dir=/tmp/tundra-art-20260908` 通过。所有交互检查点状态有效，控制台零错误；UI 指纹 `d8713a0949720d81da859a05ad8edc85040d58a8b06db83eb4a62664240bce7c`。
+- 新增可选 `--art-dir` 验收入口：由真实章节节点驱动渲染，验证对应背景路径、浏览器解码尺寸、发布清单及无横向溢出，并保存截图。未指定时保持原有交互回归流程。
+- 人工逐张检查 forest / ruin / moon 在 1366×900 和 390×844 的六张截图：棋子、星级与格子边界可辨，中央无遮挡棋盘的装饰主体，手机裁切正常。
+- Ego Lite 成功加载和解码三张场景；其截图接口超时，目视验收使用上述独立 headless Chrome 截图完成。
+- 本轮完成本地改动与验收，未执行 commit、push 或线上部署。

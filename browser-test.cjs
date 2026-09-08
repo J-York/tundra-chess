@@ -22,6 +22,7 @@ const DEBUG_PORT = 41971;
 const ORIGIN = `http://127.0.0.1:${PORT}/`;
 const SEED = 4242;
 const dump = process.argv.includes('--dump');
+const artDirectory = process.argv.find(arg => arg.startsWith('--art-dir='))?.slice('--art-dir='.length);
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -463,6 +464,53 @@ async function main() {
     );
     await settle();
     await record('after reload');
+
+    // Optional visual acceptance: real chapter nodes drive the same render path as play.
+    // Usage: npm run browser-test -- --art-dir=/tmp/tundra-art
+    if (artDirectory) {
+      fs.mkdirSync(artDirectory, { recursive: true });
+      const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, 'release-files.json'), 'utf8'));
+      for (const [width, height] of [
+        [1366, 900],
+        [390, 844],
+      ]) {
+        await call('Emulation.setDeviceMetricsOverride', {
+          width,
+          height,
+          deviceScaleFactor: 1,
+          mobile: width < 600,
+        });
+        for (let act = 0; act < 3; act++) {
+          const scene = await evaluate(`(async () => {
+            state = E.newRun({seed: 4242});
+            const node = state.map.find(n => n.act === ${act} && n.kind === 'battle');
+            state.nodeId = node.id;
+            state.stage = node.act * 9 + node.floor;
+            document.getElementById('modal').close();
+            Tundra.render();
+            const arena = document.getElementById('arena');
+            const background = getComputedStyle(arena).backgroundImage;
+            const file = 'assets/chapter-' + node.theme + '.webp';
+            if (!background.includes(file)) throw Error('Wrong chapter background: ' + background);
+            const image = new Image();
+            image.src = file;
+            await image.decode();
+            if (image.naturalWidth !== 1536 || image.naturalHeight !== 1024) throw Error('Invalid scene size');
+            if (document.documentElement.scrollWidth > innerWidth) throw Error('Horizontal overflow');
+            arena.scrollIntoView({block: 'center'});
+            return {file, theme: node.theme};
+          })()`);
+          if (!manifest.includes(scene.file)) throw Error('Scene missing from release: ' + scene.file);
+          await settle();
+          const screenshot = await call('Page.captureScreenshot', { format: 'png' });
+          fs.writeFileSync(
+            path.join(artDirectory, `${scene.theme}-${width}.png`),
+            Buffer.from(screenshot.data, 'base64'),
+          );
+          console.log(`art: ${scene.theme} ${width}×${height}, loaded, no overflow`);
+        }
+      }
+    }
 
     const errors = session.consoleErrors;
     const transcript = { seed: SEED, checkpoints };

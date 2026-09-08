@@ -11,6 +11,9 @@
   --red: #e3a294;
   --radius: 12px;
   --shadow: 0 12px 32px #06130f26;
+  --scene-forest: url("assets/chapter-forest.webp");
+  --scene-ruin: url("assets/chapter-ruin.webp");
+  --scene-moon: url("assets/chapter-moon.webp");
   font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   color-scheme: dark;
 }
@@ -557,8 +560,10 @@ header {
   color: #b4b488;
 }
 .arena {
+  --scene: var(--scene-forest);
+  --scene-shade: #10291f;
   position: relative;
-  background: #2e4937 url("assets/forest.webp") center/cover;
+  background: #2e4937 var(--scene) center/cover;
   border: 1px solid #708160;
   border-radius: 10px;
   overflow: hidden;
@@ -569,25 +574,25 @@ header {
   padding: 21px 0 18px;
   transition: filter 0.5s;
 }
-.arena.theme-moon {
-  background-blend-mode: luminosity;
-  background-color: #314b60;
+.arena.theme-moon,
+.arena.theme-heart {
+  --scene: var(--scene-moon);
+  --scene-shade: #111e39;
+  background-color: #293d57;
+  border-color: #687e98;
 }
 .arena.theme-ruin {
-  background-blend-mode: luminosity;
+  --scene: var(--scene-ruin);
+  --scene-shade: #243731;
   background-color: #49534c;
-}
-.arena.theme-heart {
-  background-color: #56603b;
-  background-blend-mode: luminosity;
+  border-color: #8b927d;
 }
 .scene-vignette {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background:
-    linear-gradient(180deg, #09282080, transparent 25%, transparent 75%, #102d2090),
-    linear-gradient(90deg, #14392777, transparent 20%, transparent 80%, #14392777);
+  background: radial-gradient(ellipse at center, transparent 35%, var(--scene-shade) 100%);
+  opacity: 0.65;
   z-index: -1;
 }
 .playfield {
@@ -1898,7 +1903,7 @@ dialog .eyebrow {
   margin: -29px -29px 22px;
   background:
     linear-gradient(0deg, #22372b, transparent 85%),
-    url("assets/forest.webp") center 20% / cover;
+    var(--scene-moon) center 20% / cover;
   display: flex;
   align-items: center;
   justify-content: center;

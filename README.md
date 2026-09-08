@@ -75,7 +75,7 @@ npm run format       # prettier --write .
   `ui-store.js` 存档与通知、`ui-effects.js` 战斗动画、`ui-map.js` 路线与地图、`ui-board.js` 棋盘与面板、
   `ui-battle.js` 战斗节拍、`ui-dialogs.js` 全部弹窗；`game.js` 只负责事件接线与启动。
 - `art.js` / `audio.js`：伙伴 SVG 和合成音效。
-- `index.html` / `style.css` / `assets/forest.png`：页面、布局与场景。场景来源见 assets/README.md。
+- `index.html` / `style.css` / `assets/chapter-*.webp`：页面、布局与场景。场景来源见 assets/README.md。
 - `tests/feedback-qa.html?phase=loss` 等本轮测试页面使用隔离内存存储，不覆盖玩家主存档、不发布到公网。
 - `test.cjs` / `balance.cjs` / `fingerprint.cjs`：规则回归、远征模拟与行为指纹。
 - `package.json` / `eslint.config.mjs` / `.prettierrc.json` / `.editorconfig`：开发期检查与统一格式，发布清单 `release-files.json` 不包含它们。
