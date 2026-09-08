@@ -55,9 +55,15 @@ python3 -m http.server 8879 --bind 127.0.0.1
 
 ## 验证与文件
 
+游戏本身仍然零依赖、零构建；下面的工具只用于开发，不进入发布目录。
+
 ```sh
-node test.cjs
-node balance.cjs 30
+npm install          # 仅安装 eslint / prettier，供本地检查使用
+npm run verify       # 语法检查 + eslint + prettier --check + 71 项规则检查
+npm test             # node test.cjs
+npm run balance      # node balance.cjs 30，五开局 × 三难度共 450 局
+npm run fingerprint  # 输出规则行为指纹，用于证明重构没有改变语义
+npm run format       # prettier --write .
 ```
 
 规则、模拟与浏览器验证见 [QA.md](QA.md)，发布信息见 [DEPLOYMENT.md](DEPLOYMENT.md)。
@@ -68,6 +74,8 @@ node balance.cjs 30
 - `art.js` / `audio.js`：伙伴 SVG 和合成音效。
 - `index.html` / `style.css` / `assets/forest.png`：页面、布局与场景。场景来源见 assets/README.md。
 - `tests/feedback-qa.html?phase=loss` 等本轮测试页面使用隔离内存存储，不覆盖玩家主存档、不发布到公网。
+- `test.cjs` / `balance.cjs` / `fingerprint.cjs`：规则回归、远征模拟与行为指纹。
+- `package.json` / `eslint.config.mjs` / `.prettierrc.json` / `.editorconfig`：开发期检查与统一格式，发布清单 `release-files.json` 不包含它们。
 
 ### 构筑组合
 
