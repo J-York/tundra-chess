@@ -236,6 +236,9 @@ async function main() {
       prefs.reduced = true;
       prefs.enabled = false;
       prefs.music = false;
+      // The battle advances in fixed steps, so a faster clock shortens the run without
+      // changing a single outcome. Motion is off, so nothing else depends on the rate.
+      prefs.speed = 6;
       syncPreferences();
     })()`);
     await evaluate('showNewRun()');
@@ -300,34 +303,153 @@ async function main() {
       await settle();
     }
 
-    // Auto-arrange, then fight the battle through the real controls.
+    // Economy controls: refresh, lock, and expanding the deployment cap.
+    await evaluate(`(() => {
+      document.getElementById('refresh').click();
+      document.getElementById('lock').click();
+      const expand = document.getElementById('expand');
+      if (!expand.disabled) expand.click();
+    })()`);
+    await settle();
+    await record('after tavern refresh, lock and expand');
+
+    // Equipment: open a deployed companion, wear the starting shield, then take it off.
+    const equipped = await evaluate(`(() => {
+      const deployed = state.units.find(u => u.pos !== null);
+      if (!deployed) return 'nobody deployed';
+      inspected = deployed.id;
+      setTab('unit');
+      renderInspector();
+      const manage = document.getElementById('manage-equipment');
+      if (!manage) return 'no equipment button';
+      manage.click();
+      const slot = document.querySelector('#modal-content [data-equip]');
+      if (!slot) return 'no bag item';
+      slot.click();
+      return state.units.find(u => u.id === deployed.id).item || 'nothing worn';
+    })()`);
+    await settle();
+    await record('after wearing ' + equipped);
+
+    await evaluate(`(() => {
+      const off = document.getElementById('unequip');
+      if (off) off.click();
+    })()`);
+    await settle();
+    await record('after taking the equipment off');
+
+    // Auto-arrange, then fight through the real controls, pausing and changing speed midway.
     await evaluate("document.getElementById('auto').click()");
     await settle();
     await record('after auto-arrange');
 
     await evaluate("document.getElementById('fight').click()");
-    await waitFor('the battle to resolve', () => evaluate("state.phase === 'result'"), 400);
+    await waitFor('the battle to start', () => evaluate("state.phase === 'battle'"), 40);
+    await sleep(250);
+    await evaluate("document.getElementById('pause').click()");
+    await settle();
+    const held = await record('battle paused');
+    await evaluate("document.getElementById('speed').click()");
+    await settle();
+    await evaluate("document.getElementById('pause').click()");
+    await waitFor('the battle to resolve', () => evaluate("state.phase === 'result'"), 600);
     await settle();
     const report = await record('battle report');
 
-    await evaluate(`(() => {
-      const button = document.getElementById('continue-result');
-      if (button) button.click();
-    })()`);
-    await settle();
-    await record('after leaving the report');
+    // Walk the expedition through whatever it meets, using the controls a player would press.
+    const walkScript = prefer => `(() => {
+      const click = selector => {
+        const el = document.querySelector(selector);
+        if (el && !el.disabled) {
+          el.click();
+          return true;
+        }
+        return false;
+      };
+      switch (state.phase) {
+        case 'result':
+          return click('#continue-result') ? 'left the report' : 'report stuck';
+        case 'reward':
+          return click('#modal-content [data-reward]') || click('#skip-reward') ? 'took a reward' : 'reward stuck';
+        case 'map': {
+          const options = GameEngine.availableNodes(state);
+          // Prefer a stop that is not a fight, so services get exercised too.
+          const wanted =
+            options.find(n => n.kind === '${prefer}') ||
+            options.find(n => !GameEngine.isCombat(n)) ||
+            options[0];
+          click('[data-map-node="' + wanted.id + '"]');
+          return click('#confirm-map-node') || click('#fight') ? 'travelled to ' + wanted.kind : 'map stuck';
+        }
+        case 'prep': {
+          // Spend what the tavern offers, so the party grows and elite rewards get reached.
+          let bought = 0;
+          for (let i = 0; i < 5; i++)
+            if (click('#shop-cards [data-buy]:not([disabled])')) bought++;
+          click('#expand');
+          click('#auto');
+          return click('#fight') ? 'started a battle after ' + bought + ' recruits' : 'prep stuck';
+        }
+        case 'camp':
+          return click('[data-camp]') ? 'rested' : 'camp stuck';
+        case 'merchant':
+          click('[data-merchant]:not([disabled])');
+          return click('#fight') ? 'traded' : 'merchant stuck';
+        case 'event':
+          return click('[data-event-choice]:not([disabled])') ? 'answered an event' : 'event stuck';
+        case 'treasure':
+          return click('[data-treasure]') ? 'opened a chest' : 'treasure stuck';
+        case 'node-result':
+          return click('#fight') ? 'moved on' : 'result stuck';
+        default:
+          return 'stop:' + state.phase;
+      }
+    })()`;
+    const seen = new Set();
+    const walk = async (label, steps, prefer) => {
+      const script = walkScript(prefer);
+      for (let step = 0; step < steps; step++) {
+        const phase = await evaluate('state.phase');
+        if (phase === 'won' || phase === 'lost' || phase === 'battle') break;
+        const outcome = await evaluate(script);
+        if (String(outcome).startsWith('stop:')) break;
+        if (await evaluate("state.phase === 'battle'"))
+          await waitFor('a battle to resolve', () => evaluate("state.phase !== 'battle'"), 600);
+        await settle();
+        const point = await record(`${label} ${String(step + 1).padStart(2, '0')}: ${outcome}`);
+        seen.add(point.phase);
+        if (String(outcome).endsWith('stuck')) throw Error('The walk could not act during ' + point.phase);
+      }
+    };
+    await walk('walk', 30, 'treasure');
 
-    // Travel: pick the first reachable node through the map surface.
+    // A second, gentler expedition that seeks merchants, so trading and relic rewards run too.
+    await evaluate('showNewRun()');
     await evaluate(`(() => {
-      if (state.phase !== 'map') return;
-      const next = GameEngine.availableNodes(state)[0];
-      const node = document.querySelector('[data-map-node="' + next.id + '"]');
-      if (node) node.click();
-      const go = document.getElementById('confirm-map-node');
-      if (go) go.click();
+      document.querySelector('[data-origin="astral"]').click();
+      document.querySelector('[data-difficulty="story"]').click();
+      document.getElementById('run-seed').value = '${SEED + 7}';
+      document.getElementById('confirm-new').click();
     })()`);
     await settle();
-    await record('after choosing a road');
+    await record('second expedition, prep phase');
+    await walk('trade', 20, 'merchant');
+
+    // The relic reward only follows an elite win, which a scripted party cannot be relied on to
+    // reach. Seed the phase through the engine, then take the reward with a real click, so the
+    // reward dialog and its handler are covered like every other surface.
+    const rewarded = await evaluate(`(() => {
+      const pool = Object.keys(GameEngine.RELICS).filter(id => !['spring', 'purse'].includes(id));
+      state.phase = 'reward';
+      state.rewards = pool.slice(0, 3).map(id => 'relic:' + id);
+      showRewards();
+      const pick = document.querySelector('#modal-content [data-reward]');
+      if (!pick) return 'no reward offered';
+      pick.click();
+      return state.relics.join(',') || 'nothing granted';
+    })()`);
+    await settle();
+    await record('after taking a relic reward (' + rewarded + ')');
 
     // Reload and make sure the saved expedition comes back the same.
     await call('Page.navigate', { url: ORIGIN });
@@ -352,7 +474,9 @@ async function main() {
             ('gold ' + point.gold).padEnd(9) +
             (point.valid ? 'valid' : 'INVALID STATE'),
         );
-      console.log('\nbattle result: ' + report.labels.phase + ' / life ' + report.life);
+      console.log('\npaused mid-battle at: ' + held.labels.hint);
+      console.log('battle result: ' + report.labels.phase + ' / life ' + report.life);
+      console.log('phases exercised: ' + [...seen].sort().join(', '));
       console.log('console errors: ' + (errors.length ? errors.join(' | ') : 'none'));
       console.log('\nUI fingerprint: ' + digest);
     }
