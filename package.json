@@ -7,7 +7,7 @@
   "type": "commonjs",
   "scripts": {
     "test": "node test.cjs",
-    "check": "node --check world.js && node --check engine.js && node --check game.js && node --check art.js && node --check audio.js",
+    "check": "node --check world.js && node --check engine.js && node --check art.js && node --check audio.js && node --check ui-store.js && node --check ui-effects.js && node --check ui-map.js && node --check ui-board.js && node --check ui-battle.js && node --check ui-dialogs.js && node --check game.js",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

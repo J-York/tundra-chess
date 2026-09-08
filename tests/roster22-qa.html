@@ -215,9 +215,9 @@
     <script src="game.js"></script>
     <script>
       const qaView = new URLSearchParams(location.search).get("view");
-      if (qaView === "codex") showCodex();
+      if (qaView === "codex") Tundra.showCodex();
       if (qaView === "art") {
-        showDialog(
+        Tundra.showDialog(
           "art",
           heading("十位新同行者", "5个阵营 × 5类职业 · 两位双阵营伙伴", "COMPANIONS / NEW ARRIVALS") +
             '<div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px">' +

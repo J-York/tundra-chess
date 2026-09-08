@@ -221,7 +221,7 @@
         $("arena").className = "arena theme-" + theme;
       }
       if (new URLSearchParams(location.search).has("combat")) {
-        beginBattle();
+        Tundra.beginBattle();
         stopClock();
         for (let i = 0; i < 21; i++) {
           GameEngine.step(state.battle);

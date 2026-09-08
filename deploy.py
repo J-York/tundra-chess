@@ -27,7 +27,7 @@ if checks.returncode:
     print(checks.stdout + checks.stderr)
     raise SystemExit(checks.returncode)
 print(checks.stdout.strip().splitlines()[-1], flush=True)
-for filename in ["world.js", "engine.js", "game.js", "art.js", "audio.js"]:
+for filename in ["world.js", "engine.js", "art.js", "audio.js", *["ui-store.js", "ui-effects.js", "ui-map.js", "ui-board.js", "ui-battle.js", "ui-dialogs.js"], "game.js"]:
     subprocess.run(["node", "--check", filename], cwd=ROOT, check=True)
 
 # Lint and formatting gate the release too, but only when the dev tooling is installed:

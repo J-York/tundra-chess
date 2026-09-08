@@ -1779,4 +1779,50 @@ check('Every relic number is rendered into its own description and reaches the r
     assert.ok(offer.price >= E.RELIC_VALUES.bargain.floor, 'the discount floor must hold: ' + offer.price);
 });
 
+check('Every interface module resolves: nothing is called that no module exports', () => {
+  const fs = require('node:fs');
+  const modules = ['ui-store.js', 'ui-effects.js', 'ui-map.js', 'ui-board.js', 'ui-battle.js', 'ui-dialogs.js'];
+  const owner = new Map();
+  const defined = new Map();
+  for (const file of modules) {
+    const source = fs.readFileSync(require('node:path').join(__dirname, file), 'utf8');
+    for (const m of source.matchAll(/^ {2}T\.(\w+) = (\w+);$/gm)) {
+      assert.equal(m[1], m[2], file + ' should export ' + m[2] + ' under its own name');
+      assert.ok(!owner.has(m[1]), m[1] + ' is exported by both ' + owner.get(m[1]) + ' and ' + file);
+      owner.set(m[1], file);
+    }
+    defined.set(file, new Set([...source.matchAll(/^ {2}(?:async )?function (\w+)\(/gm)].map(m => m[1])));
+    // A module may only export something it actually declares.
+    for (const [name, from] of owner)
+      if (from === file) assert.ok(defined.get(file).has(name), file + ' exports a name it does not declare: ' + name);
+  }
+  // eslint cannot catch T.foo() where foo was never exported: that only fails at runtime.
+  const sources = [...modules, 'game.js'].map(file => [
+    file,
+    fs.readFileSync(require('node:path').join(__dirname, file), 'utf8'),
+  ]);
+  const missing = [];
+  for (const [file, source] of sources)
+    for (const m of source.matchAll(/\b(?:T|Tundra)\.(\w+)\b/g))
+      if (!owner.has(m[1]) && m[1] !== 'ui') missing.push(file + ' calls ' + m[1] + ', which no module exports');
+  assert.deepEqual(missing, [], missing.join('; '));
+  assert.ok(owner.size >= 50, 'expected the shared surface to be substantial, got ' + owner.size);
+
+  // The page, the QA harnesses and browser-test.cjs drive these by name. Trimming exports to
+  // what other modules call would otherwise drop them, and only a browser run would notice.
+  for (const name of [
+    'showNewRun',
+    'showCodex',
+    'showBuilds',
+    'showRecords',
+    'showRewards',
+    'showDialog',
+    'closeDialog',
+    'syncPreferences',
+    'beginBattle',
+    'render',
+  ])
+    assert.ok(owner.has(name), 'the public surface must keep exporting ' + name);
+});
+
 console.log(`\n${checks} rule checks passed.`);

@@ -1,1 +1,16 @@
-["index.html", "style.css", "world.js", "engine.js", "game.js", "audio.js", "art.js", "assets/forest.webp"]
+[
+  "index.html",
+  "style.css",
+  "world.js",
+  "engine.js",
+  "ui-store.js",
+  "ui-effects.js",
+  "ui-map.js",
+  "ui-board.js",
+  "ui-battle.js",
+  "ui-dialogs.js",
+  "game.js",
+  "audio.js",
+  "art.js",
+  "assets/forest.webp"
+]

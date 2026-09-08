@@ -90,7 +90,12 @@ async function connect() {
   const evaluate = async expression => {
     const result = await call('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
     if (result.exceptionDetails)
-      throw Error('Page threw on: ' + expression.slice(0, 120) + '\n' + JSON.stringify(result.exceptionDetails.text));
+      throw Error(
+        'Page threw on: ' +
+          expression.slice(0, 120) +
+          '\n  ' +
+          (result.exceptionDetails.exception?.description || result.exceptionDetails.text),
+      );
     return result.result.value;
   };
   return { call, evaluate, consoleErrors, close: () => ws.close(), targetId: target.id };
@@ -239,9 +244,9 @@ async function main() {
       // The battle advances in fixed steps, so a faster clock shortens the run without
       // changing a single outcome. Motion is off, so nothing else depends on the rate.
       prefs.speed = 6;
-      syncPreferences();
+      Tundra.syncPreferences();
     })()`);
-    await evaluate('showNewRun()');
+    await evaluate('Tundra.showNewRun()');
     await evaluate(`(() => {
       document.querySelector('[data-origin="forest"]').click();
       document.querySelector('[data-difficulty="normal"]').click();
@@ -292,14 +297,14 @@ async function main() {
     // Dialogs the QA pages care about.
     for (const [name, script] of [
       ['guide dialog', "document.getElementById('help').click()"],
-      ['codex dialog', 'showCodex()'],
-      ['builds dialog', 'showBuilds()'],
-      ['records dialog', 'showRecords()'],
+      ['codex dialog', 'Tundra.showCodex()'],
+      ['builds dialog', 'Tundra.showBuilds()'],
+      ['records dialog', 'Tundra.showRecords()'],
     ]) {
       await evaluate(script);
       await settle();
       await record(name);
-      await evaluate("closeDialog(); document.getElementById('modal').close();");
+      await evaluate("Tundra.closeDialog(); document.getElementById('modal').close();");
       await settle();
     }
 
@@ -424,7 +429,7 @@ async function main() {
     await walk('walk', 30, 'treasure');
 
     // A second, gentler expedition that seeks merchants, so trading and relic rewards run too.
-    await evaluate('showNewRun()');
+    await evaluate('Tundra.showNewRun()');
     await evaluate(`(() => {
       document.querySelector('[data-origin="astral"]').click();
       document.querySelector('[data-difficulty="story"]').click();
@@ -442,7 +447,7 @@ async function main() {
       const pool = Object.keys(GameEngine.RELICS).filter(id => !['spring', 'purse'].includes(id));
       state.phase = 'reward';
       state.rewards = pool.slice(0, 3).map(id => 'relic:' + id);
-      showRewards();
+      Tundra.showRewards();
       const pick = document.querySelector('#modal-content [data-reward]');
       if (!pick) return 'no reward offered';
       pick.click();
@@ -488,7 +493,11 @@ async function main() {
     server.kill();
     // Chrome flushes its profile on the way out, so removal has to tolerate a slow exit.
     await new Promise(resolve => chrome.once('exit', resolve).once('error', resolve));
-    fs.rmSync(chromeProfile, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
+    try {
+      fs.rmSync(chromeProfile, { recursive: true, force: true, maxRetries: 30, retryDelay: 200 });
+    } catch {
+      // A leftover temp profile must never mask the result of the run.
+    }
   }
 }
 
