@@ -134,7 +134,7 @@ check('Duplicate types do not stack traits; three distinct forest types regenera
 });
 check('Free refresh, escalating capacity cost and capped interest follow the visible rules', () => {
   const s = E.newRun();
-  let gold = s.gold;
+  const gold = s.gold;
   E.refresh(s);
   assert.equal(s.gold, gold);
   E.refresh(s);

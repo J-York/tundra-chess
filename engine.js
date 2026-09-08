@@ -700,7 +700,7 @@
       startedAt: Date.now(),
       recorded: false,
     };
-    s.units = ORIGINS[origin].types.map((t, i) => unit(s, t, TYPES[t].range === 1 ? 20 : 32));
+    s.units = ORIGINS[origin].types.map(t => unit(s, t, TYPES[t].range === 1 ? 20 : 32));
     if (s.units[0].pos === s.units[1].pos) s.units[1].pos++;
     s.shop = [...ORIGINS[origin].types, 'healer', 'frost', 'mage'];
     return s;
@@ -1093,8 +1093,8 @@
   function hurt(b, source, target, raw, kind = 'physical', isBasic = false, critical = false) {
     if (target.dead) return 0;
     const mitigation = kind === 'true' ? 1 : 100 / (100 + target.armor * (kind === 'magic' ? 0.45 : 1));
-    let value = Math.max(1, Math.round(raw * mitigation)),
-      absorbed = Math.min(target.shield, value);
+    let value = Math.max(1, Math.round(raw * mitigation));
+    const absorbed = Math.min(target.shield, value);
     consumeShield(target, absorbed);
     target.blocked += absorbed;
     value -= absorbed;
@@ -1807,7 +1807,6 @@
   function eventOptions(s) {
     const node = currentNode(s),
       item = lootFor(s),
-      relic = lootFor(s, 'relic'),
       itemName = ITEMS[item.split(':')[1]].name;
     const rng = { rng: node.lootSeed },
       cores = shuffle(['wardflow', 'moonwell', 'chorus', 'overflow'], rng).slice(0, 2),

@@ -27,7 +27,7 @@ let newOrigin = 'forest',
   mapAct = 0,
   rangeMode = 'attack',
   previewAim = null;
-let prefs = { enabled: true, music: false, volume: 0.45, reduced: false, tip: true };
+const prefs = { enabled: true, music: false, volume: 0.45, reduced: false, tip: true };
 let records = { wins: 0, best: 0, runs: [] };
 try {
   const p = JSON.parse(localStorage.getItem(PREFS));
@@ -190,7 +190,6 @@ function renderTravel() {
   const title = (label, subtitle) =>
     `<div class="travel-heading"><span class="eyebrow">${E.CHAPTERS[node.act].name} · 第 ${node.floor + 1} 站</span><h3>${label}</h3><p>${subtitle}</p></div>`;
   if (state.phase === 'map') {
-    const choice = selectedMapNode();
     $('travel-surface').innerHTML =
       `<div class="map-title"><strong>选择下一段旅途</strong><button class="quiet" id="open-map-large">展开地图 ↗</button></div>${mapHTML(node.act)}<p class="map-footnote">亮边节点可前往 · 点击查看，右下角确认 · 首领：${E.CHAPTERS[node.act].boss.name}</p>`;
   } else if (state.phase === 'camp') {
