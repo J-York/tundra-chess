@@ -431,53 +431,93 @@
     assassin: { name: '夜行', icon: '☾', desc: '2 种刺客：刺客普攻暴击率 +15%' },
     mage: { name: '共鸣', icon: '✶', desc: '2 种法师：每秒额外恢复 3 法力' },
   };
-  const ITEMS = {
-    blade: { name: '风纹短刃', icon: '⚔', desc: '攻击 +22%', atk: 0.22 },
-    buckler: { name: '橡木圆盾', icon: '⬡', desc: '护甲 +18，生命 +12%', armor: 18, hp: 0.12 },
-    wand: { name: '星屑法杖', icon: '✧', desc: '技能强度 +25%，初始法力 +20', power: 0.25, mana: 20 },
-    boots: { name: '轻羽长靴', icon: '➶', desc: '攻击速度 +20%，移动速度 +25%', haste: 0.2, move: 0.25 },
-    charm: { name: '复苏琥珀', icon: '❧', desc: '治疗效果 +35%，生命 +15%', healing: 0.35, hp: 0.15 },
-    fang: { name: '月牙坠饰', icon: '☽', desc: '造成伤害的 18% 转为自身治疗', leech: 0.18 },
+  // Equipment text is generated from the stats themselves, so a value and its description
+  // cannot drift apart. Refined copies scale the stats and re-render the same template, which
+  // replaces a regex that multiplied every number in the prose — including ones that must not
+  // scale, such as 余烬木心's trigger threshold and every shield duration.
+  const REFINE = 1.6;
+  const SHIELD_SECONDS = 5;
+  const EMERGENCY_HP = 0.4;
+  const ITEM_STATS = [
+    'atk',
+    'armor',
+    'hp',
+    'power',
+    'mana',
+    'haste',
+    'move',
+    'healing',
+    'leech',
+    'crit',
+    'critPower',
+    'castMana',
+    'emergencyShield',
+  ];
+  const pct = value => Math.round(value * 1000) / 10;
+  const num = value => Math.round(value * 10) / 10;
+  const ITEM_DEFS = {
+    blade: { name: '风纹短刃', icon: '⚔', stats: { atk: 0.22 }, text: s => `攻击 +${pct(s.atk)}%` },
+    buckler: {
+      name: '橡木圆盾',
+      icon: '⬡',
+      stats: { armor: 18, hp: 0.12 },
+      text: s => `护甲 +${num(s.armor)}，生命 +${pct(s.hp)}%`,
+    },
+    wand: {
+      name: '星屑法杖',
+      icon: '✧',
+      stats: { power: 0.25, mana: 20 },
+      text: s => `技能强度 +${pct(s.power)}%，初始法力 +${num(s.mana)}`,
+    },
+    boots: {
+      name: '轻羽长靴',
+      icon: '➶',
+      stats: { haste: 0.2, move: 0.25 },
+      text: s => `攻击速度 +${pct(s.haste)}%，移动速度 +${pct(s.move)}%`,
+    },
+    charm: {
+      name: '复苏琥珀',
+      icon: '❧',
+      stats: { healing: 0.35, hp: 0.15 },
+      text: s => `治疗效果 +${pct(s.healing)}%，生命 +${pct(s.hp)}%`,
+    },
+    fang: {
+      name: '月牙坠饰',
+      icon: '☽',
+      stats: { leech: 0.18 },
+      text: s => `造成伤害的 ${pct(s.leech)}% 转为自身治疗`,
+    },
     moonlens: {
       name: '赤月透镜',
       icon: '◉',
-      desc: '普攻暴击率 +20%，暴击伤害 +25 个百分点',
-      crit: 0.2,
-      critPower: 0.25,
+      stats: { crit: 0.2, critPower: 0.25 },
+      text: s => `普攻暴击率 +${pct(s.crit)}%，暴击伤害 +${pct(s.critPower)} 个百分点`,
     },
-    channel: { name: '回响沙漏', icon: '⌛', desc: '技能强度 +10%；每次施法后恢复 12 法力', power: 0.1, castMana: 12 },
+    channel: {
+      name: '回响沙漏',
+      icon: '⌛',
+      stats: { power: 0.1, castMana: 12 },
+      text: s => `技能强度 +${pct(s.power)}%；每次施法后恢复 ${num(s.castMana)} 法力`,
+    },
     heartwood: {
       name: '余烬木心',
       icon: '♧',
-      desc: '生命 +8%；每场首次受伤后存活且生命不高于 40% 时，获得最大生命 25% 的护盾，持续 5 秒',
-      hp: 0.08,
-      emergencyShield: 0.25,
+      stats: { hp: 0.08, emergencyShield: 0.25 },
+      // The threshold and the duration are fixed by the rule, so they stay out of the scaling.
+      text: s =>
+        `生命 +${pct(s.hp)}%；每场首次受伤后存活且生命不高于 ${pct(EMERGENCY_HP)}% 时，` +
+        `获得最大生命 ${pct(s.emergencyShield)}% 的护盾，持续 ${SHIELD_SECONDS} 秒`,
     },
   };
-  const BASIC_ITEMS = Object.keys(ITEMS);
-  for (const id of BASIC_ITEMS) {
-    const basic = ITEMS[id],
-      enhanced = { ...basic, name: basic.name + '·精制', desc: '' };
-    for (const key of [
-      'atk',
-      'armor',
-      'hp',
-      'power',
-      'mana',
-      'haste',
-      'move',
-      'healing',
-      'leech',
-      'crit',
-      'critPower',
-      'castMana',
-      'emergencyShield',
-    ])
-      if (basic[key]) enhanced[key] = Math.round(basic[key] * 1.6 * 10000) / 10000;
-    enhanced.desc = basic.desc.replace(/\d+(?:\.\d+)?/g, n => String(Math.round(Number(n) * 1.6 * 10) / 10));
-    ITEMS[id + '_plus'] = enhanced;
+  const ITEMS = {};
+  for (const [id, def] of Object.entries(ITEM_DEFS)) {
+    const refined = {};
+    for (const key of ITEM_STATS)
+      if (def.stats[key]) refined[key] = Math.round(def.stats[key] * REFINE * 10000) / 10000;
+    ITEMS[id] = { name: def.name, icon: def.icon, desc: def.text(def.stats), ...def.stats };
+    ITEMS[id + '_plus'] = { name: def.name + '·精制', icon: def.icon, desc: def.text(refined), ...refined };
   }
-  ITEMS.heartwood_plus.desc = '生命 +12.8%；每场首次受伤后存活且生命不高于 40% 时，获得最大生命 40% 的护盾，持续 5 秒';
+  const BASIC_ITEMS = Object.keys(ITEM_DEFS);
   const RELICS = {
     vigor: { name: '古树之种', icon: '❧', desc: '全队最大生命 +12%' },
     edge: { name: '月光磨石', icon: '☽', desc: '全队攻击 +10%' },
@@ -1173,7 +1213,7 @@
       }
       source.kills++;
       b.events.push({ type: 'death', id: target.id, pos: target.pos });
-    } else if (value && target.emergencyShield && !target.emergencyUsed && target.hp <= target.maxHp * 0.4) {
+    } else if (value && target.emergencyShield && !target.emergencyUsed && target.hp <= target.maxHp * EMERGENCY_HP) {
       target.emergencyUsed = true;
       shield(b, target, target, target.maxHp * target.emergencyShield);
       proc(b, target, '余烬木心');
@@ -1189,7 +1229,7 @@
     }
     return value;
   }
-  function shield(b, source, target, value, duration = 5) {
+  function shield(b, source, target, value, duration = SHIELD_SECONDS) {
     if (target.dead) return;
     const added = Math.round(value);
     target.shield += added;

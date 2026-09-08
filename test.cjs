@@ -1617,4 +1617,36 @@ check('Difficulty ladder is ordered and its shown percentage is derived from the
   assert.ok(E.enemyScale(s) > E.enemyScale(easy) * 1.2);
 });
 
+check('Refined equipment scales only its stats, and every description is generated from them', () => {
+  for (const id of E.BASIC_ITEMS) {
+    const basic = E.ITEMS[id],
+      refined = E.ITEMS[id + '_plus'];
+    assert.ok(refined, id + ' must have a refined form');
+    assert.equal(refined.name, basic.name + '·精制');
+    const stats = Object.keys(basic).filter(k => !['name', 'icon', 'desc'].includes(k));
+    assert.ok(stats.length, id + ' must carry at least one stat');
+    for (const key of stats)
+      assert.equal(refined[key], Math.round(basic[key] * 1.6 * 10000) / 10000, id + '.' + key + ' scales by 1.6');
+    assert.deepEqual(Object.keys(refined).sort(), Object.keys(basic).sort(), id + ' must gain no stray field');
+    // Every stat has to be readable in its own description, at both tiers.
+    for (const [item, label] of [
+      [basic, id],
+      [refined, id + '_plus'],
+    ])
+      for (const key of stats) {
+        const shown = key === 'armor' || key === 'mana' || key === 'castMana' ? item[key] : item[key] * 100;
+        assert.ok(
+          item.desc.includes(String(Math.round(shown * 10) / 10)),
+          label + ' description must state ' + key + ' as ' + shown + ': ' + item.desc,
+        );
+      }
+  }
+  // The bug this replaces: a regex over the prose also scaled numbers fixed by the rule.
+  const heartwood = E.ITEMS.heartwood_plus.desc;
+  assert.ok(heartwood.includes('不高于 40%'), 'the trigger threshold must not scale: ' + heartwood);
+  assert.ok(heartwood.includes('持续 5 秒'), 'the shield duration must not scale: ' + heartwood);
+  assert.ok(heartwood.includes('最大生命 40% 的护盾'), 'the shield size must scale: ' + heartwood);
+  assert.ok(E.ITEMS.heartwood.desc.includes('最大生命 25% 的护盾'));
+});
+
 console.log(`\n${checks} rule checks passed.`);
