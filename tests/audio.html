@@ -1,0 +1,19 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>苔原远征 · 音频检查</title><style>body{background:#14271f;color:#d8e8c1;font:14px monospace;max-width:900px;margin:40px auto;padding:20px}button{padding:12px;background:#bfd59d;border:0;border-radius:7px;color:#203520;cursor:pointer}pre{white-space:pre-wrap;line-height:1.7}</style><h1>合成音效离线检查</h1><p>在离线音频上下文中运行与游戏相同的声音合成器，检查波形非静音、无削波，以及静音开关。</p><button id="run">运行音频检查</button><pre id="output">准备就绪</pre><script src="../audio.js"></script><script>
+'use strict';
+async function sample(name,enabled=true){
+ const ctx=new OfflineAudioContext(1,22050*3,22050),s=new ForestAudio();
+ s.ctx=ctx;s.master=ctx.createGain();s.master.gain.value=.16;s.master.connect(ctx.destination);s.musicBus=ctx.createGain();s.musicBus.connect(s.master);s.enabled=enabled;
+ s.play(name);const buffer=await ctx.startRendering(),data=buffer.getChannelData(0);
+ let peak=0,energy=0;for(const value of data){peak=Math.max(peak,Math.abs(value));energy+=value*value;}
+ return {name,peak:Number(peak.toFixed(5)),rms:Number(Math.sqrt(energy/data.length).toFixed(5)),nodes:s.played};
+}
+document.getElementById('run').onclick=async()=>{
+ const button=document.getElementById('run'),out=document.getElementById('output');button.disabled=true;out.textContent='运行中…';
+ try{const rows=[];for(const name of ['click','move','buy','equip','merge','error','start','arrow','hit','magic','heal','shield','death','victory','defeat','reward']){
+  const row=await sample(name);if(!(row.peak>.001&&row.peak<1))throw Error(name+' waveform failed: '+JSON.stringify(row));rows.push(row);
+ }
+ const muted=await sample('victory',false);if(muted.peak!==0||muted.nodes!==0)throw Error('Mute did not silence output');
+ out.textContent='PASS — 16 种音效均有有效波形，无削波；静音输出为零。\n\n'+rows.map(r=>r.name.padEnd(9)+' peak '+String(r.peak).padEnd(8)+' rms '+r.rms+' nodes '+r.nodes).join('\n');out.dataset.result='pass';
+ }catch(error){out.textContent='FAIL — '+error.message;out.dataset.result='fail';}finally{button.disabled=false;}
+};
+</script></html>
