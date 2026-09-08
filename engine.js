@@ -9,6 +9,18 @@
     LAST_STAGE = W.CHAPTERS.length * W.FLOORS - 1;
   const RULESET = 'companions-22';
   const LEGACY_RULESET = 'twelve-1';
+  // Rule constants shared by the battle code and by the text that describes it. Anything a
+  // skill description quotes lives here or in that skill's params, never as a loose literal.
+  const MAX_MANA = 100;
+  const SHIELD_SECONDS = 5;
+  const EMERGENCY_HP = 0.4;
+  const TAUNT_RANGE = 3;
+  const AMBUSH_SECONDS = 1.5;
+  const STEALTH_SECONDS = 1;
+  const REFINE = 1.6;
+  const pct = value => Math.round(value * 1000) / 10;
+  const num = value => Math.round(value * 10) / 10;
+  const cn = value => ['零', '一', '两', '三', '四', '五', '六'][value] ?? String(value);
   const TYPES = {
     guard: {
       name: '苔石守卫',
@@ -408,6 +420,126 @@
       desc: ['全队普攻暴击率 +15%', '全队普攻暴击率 +30%，暴击伤害提高至 175%'],
     },
   };
+  // Every number a skill uses lives here once: cast() reads the params, and the companion's
+  // description is rendered from the same values. The two cannot drift apart, and a tuning
+  // change is a single edit rather than a code edit plus a prose edit that must agree.
+  const SKILLS = {
+    guard: {
+      params: { flat: 90, ratio: 0.8, taunt: 2.5 },
+      text: p =>
+        `获得持续 ${SHIELD_SECONDS} 秒的 ${num(p.flat)} + ${pct(p.ratio)}% 攻击护盾，` +
+        `并嘲讽 ${TAUNT_RANGE} 格内敌人 ${num(p.taunt)} 秒。`,
+    },
+    ranger: {
+      params: { shots: 3, ratio: 0.8 },
+      text: p => `对当前目标射出${cn(p.shots)}箭，共造成 ${pct(p.shots * p.ratio)}% 攻击的物理伤害。`,
+    },
+    healer: {
+      params: { flat: 55, ratio: 1.4, targets: 2 },
+      text: p => `治疗最虚弱的${cn(p.targets)}名友军 ${num(p.flat)} + ${pct(p.ratio)}% 攻击，并清除眩晕、减速与凋零。`,
+    },
+    knight: {
+      params: { flat: 55, ratio: 0.7 },
+      text: p => `自身与相邻友军获得 ${num(p.flat)} + ${pct(p.ratio)}% 攻击的护盾，持续 ${SHIELD_SECONDS} 秒。`,
+    },
+    mage: {
+      params: { ratio: 2.1, radius: 1 },
+      text: p => `对目标及距其 ${num(p.radius)} 格内的敌人造成 ${pct(p.ratio)}% 攻击的魔法伤害。`,
+    },
+    oracle: {
+      params: { mana: 38, ratio: 0.9, targets: 2 },
+      text: p => `为法力最低的${cn(p.targets)}名其他友军恢复 ${num(p.mana)} 法力与 ${pct(p.ratio)}% 攻击的生命。`,
+    },
+    rogue: {
+      params: { ratio: 2.3 },
+      text: p =>
+        `开场潜伏 ${num(AMBUSH_SECONDS)} 秒再跃向后排，落地后 ${num(STEALTH_SECONDS)} 秒不可被选中（仍受范围伤害）；` +
+        `施法突袭最虚弱的敌人，造成 ${pct(p.ratio)}% 攻击的物理伤害。`,
+    },
+    frost: {
+      params: { ratio: 1.5, stun: 1.5, slow: 3 },
+      text: p => `造成 ${pct(p.ratio)}% 攻击的魔法伤害，眩晕目标 ${num(p.stun)} 秒并减速邻近敌人 ${num(p.slow)} 秒。`,
+    },
+    hunter: {
+      params: { ratio: 1.6, targets: 2 },
+      text: p => `向距离最远的${cn(p.targets)}名敌人各造成 ${pct(p.ratio)}% 攻击的真实伤害，无视护甲。`,
+    },
+    warden: {
+      params: { flat: 65, ratio: 1, targets: 2, push: 1, slow: 2 },
+      text: p =>
+        `为生命比例最低的${cn(p.targets)}名友军施加 ${num(p.flat)} + ${pct(p.ratio)}% 攻击护盾，持续 ${SHIELD_SECONDS} 秒；` +
+        `击退各目标相邻的一名敌人 ${num(p.push)} 格并减速 ${num(p.slow)} 秒。可在后排保护脆弱伙伴。`,
+    },
+    breaker: {
+      params: { breakFlat: 100, breakRatio: 2, ratio: 1.7 },
+      text: p =>
+        `优先瞄准护盾最厚且可被选中的敌人，摧毁至多 ${num(p.breakFlat)} + ${pct(p.breakRatio)}% 攻击护盾，` +
+        `再造成 ${pct(p.ratio)}% 攻击的魔法伤害。`,
+    },
+    hexer: {
+      params: { ratio: 1.4, radius: 1, wither: 5 },
+      text: p =>
+        `对目标及其 ${num(p.radius)} 格内敌人造成 ${pct(p.ratio)}% 攻击的魔法伤害，` +
+        `施加 ${num(p.wither)} 秒凋零：所受治疗和生命回复减半。药师的净化可以移除凋零。`,
+    },
+    oakmaul: {
+      params: { ratio: 1.7, healFlat: 40, healRatio: 0.6 },
+      text: p =>
+        `对自身相邻敌人造成 ${pct(p.ratio)}% 攻击的物理伤害；命中至少一人时，` +
+        `治疗自身 ${num(p.healFlat)} + ${pct(p.healRatio)}% 攻击。`,
+    },
+    duskblade: {
+      params: { ratio: 2.3, healFlat: 45, healRatio: 0.8 },
+      text: p =>
+        `对当前目标造成 ${pct(p.ratio)}% 攻击的物理伤害，并治疗自身 ${num(p.healFlat)} + ${pct(p.healRatio)}% 攻击。` +
+        `与所有刺客一样，开场潜伏 ${num(AMBUSH_SECONDS)} 秒后切入，落地有 ${num(STEALTH_SECONDS)} 秒影幕保护。`,
+    },
+    tideguard: {
+      params: { flat: 65, ratio: 1 },
+      text: p =>
+        `为自身与生命比例最低的一名其他友军各施加 ${num(p.flat)} + ${pct(p.ratio)}% 攻击的护盾，` +
+        `持续 ${SHIELD_SECONDS} 秒。`,
+    },
+    wavecaller: {
+      params: { ratio: 1.5 },
+      text: p => `潮水横扫当前目标所在的整排，对这一排的敌人造成 ${pct(p.ratio)}% 攻击的魔法伤害。`,
+    },
+    pearl: {
+      params: { flat: 95, ratio: 2 },
+      text: p => `治疗生命比例最低的一名友军 ${num(p.flat)} + ${pct(p.ratio)}% 攻击，专注挽救一位濒危伙伴。`,
+    },
+    songbird: {
+      params: { flat: 70, ratio: 1.1, targets: 2 },
+      text: p =>
+        `为攻击最高的${cn(p.targets)}名友军各施加 ${num(p.flat)} + ${pct(p.ratio)}% 攻击的护盾，持续 ${SHIELD_SECONDS} 秒。` +
+        `同时计入林地与潮汐羁绊。`,
+    },
+    emberguard: {
+      params: { flat: 75, ratio: 1, splash: 0.8 },
+      text: p =>
+        `自身获得 ${num(p.flat)} + ${pct(p.ratio)}% 攻击的护盾，持续 ${SHIELD_SECONDS} 秒；` +
+        `同时对相邻敌人造成 ${pct(p.splash)}% 攻击的魔法伤害。`,
+    },
+    cinder: {
+      params: { ratio: 3.3 },
+      text: p => `将火光凝成一束，对当前目标造成 ${pct(p.ratio)}% 攻击的魔法伤害。专注击破单个敌人。`,
+    },
+    flarebow: {
+      params: { ratio: 1.5, targets: 2 },
+      text: p => `向距离最近的${cn(p.targets)}名可选敌人各射出一箭，造成 ${pct(p.ratio)}% 攻击的物理伤害。`,
+    },
+    sparkscout: {
+      params: { ratio: 2, stun: 1 },
+      text: p =>
+        `对当前目标造成 ${pct(p.ratio)}% 攻击的物理伤害并眩晕 ${num(p.stun)} 秒。` +
+        `开场潜伏 ${num(AMBUSH_SECONDS)} 秒后切入，落地有 ${num(STEALTH_SECONDS)} 秒影幕保护；同时计入星辉与余烬羁绊。`,
+    },
+    ancient: {
+      params: { ratio: 0.85, fury: 0.35 },
+      text: p => `震击全场造成 ${pct(p.ratio)}% 攻击的魔法伤害；半血时狂怒，攻击速度提升 ${pct(p.fury)}%。`,
+    },
+  };
+  for (const [type, skill] of Object.entries(SKILLS)) TYPES[type].desc = skill.text(skill.params);
   // Factions hold different numbers of companions (林地 6 … 潮汐 / 余烬 4) but share the same
   // 2 / 3 thresholds, so an unweighted tavern makes a small faction measurably harder to assemble.
   // Every companion of an under-sized faction gets one extra copy per missing member, which
@@ -435,9 +567,6 @@
   // cannot drift apart. Refined copies scale the stats and re-render the same template, which
   // replaces a regex that multiplied every number in the prose — including ones that must not
   // scale, such as 余烬木心's trigger threshold and every shield duration.
-  const REFINE = 1.6;
-  const SHIELD_SECONDS = 5;
-  const EMERGENCY_HP = 0.4;
   const ITEM_STATS = [
     'atk',
     'armor',
@@ -453,8 +582,6 @@
     'castMana',
     'emergencyShield',
   ];
-  const pct = value => Math.round(value * 1000) / 10;
-  const num = value => Math.round(value * 10) / 10;
   const ITEM_DEFS = {
     blade: { name: '风纹短刃', icon: '⚔', stats: { atk: 0.22 }, text: s => `攻击 +${pct(s.atk)}%` },
     buckler: {
@@ -833,7 +960,7 @@
           (d.role === 'ranger' && t.ranger >= 2 ? 0.18 : 0)),
       moveInterval: 0.36 / (1 + (i.move || 0)),
       power: 1 + (t.astral >= 3 ? 0.35 : t.astral >= 2 ? 0.2 : 0) + (i.power || 0),
-      mana: Math.min(100, d.mana + (t.astral >= 3 ? 15 : 0) + count(relics, 'spark') * 20 + (i.mana || 0)),
+      mana: Math.min(MAX_MANA, d.mana + (t.astral >= 3 ? 15 : 0) + count(relics, 'spark') * 20 + (i.mana || 0)),
       manaRegen: 3 + (t.mage >= 2 ? 3 : 0),
       regen: t.forest >= 3 ? 0.008 : 0,
       crit: Math.min(
@@ -1038,7 +1165,7 @@
           st.moveInterval /= 1.2;
           break;
         case 'charged':
-          st.mana = Math.min(100, st.mana + 25);
+          st.mana = Math.min(MAX_MANA, st.mana + 25);
           break;
         case 'warded':
           st.startShield += 45;
@@ -1047,7 +1174,7 @@
           st.thorns += 0.25;
           break;
         case 'convergence':
-          st.mana = Math.min(100, st.mana + 25);
+          st.mana = Math.min(MAX_MANA, st.mana + 25);
           st.manaRegen += 2;
           break;
         case 'lastwood':
@@ -1132,7 +1259,7 @@
       }
     for (const u of b.units.filter(u => TYPES[u.type].role === 'assassin')) {
       u.ambushPending = true;
-      u.stealthUntil = 2.5;
+      u.stealthUntil = AMBUSH_SECONDS + STEALTH_SECONDS;
     }
     s.phase = 'battle';
     s.battle = b;
@@ -1183,7 +1310,7 @@
     target.blocked += absorbed;
     value -= absorbed;
     if (absorbed && target.shieldMana && b.time >= (target.wardReady || 0)) {
-      target.mana = Math.min(100, target.mana + target.shieldMana);
+      target.mana = Math.min(MAX_MANA, target.mana + target.shieldMana);
       target.wardReady = b.time + 1;
       proc(b, target, '潮汐盾纹');
     }
@@ -1194,7 +1321,7 @@
       target.taken += value;
       target.takenKinds[kind] += value;
     }
-    target.mana = Math.min(100, target.mana + 6);
+    target.mana = Math.min(MAX_MANA, target.mana + 6);
     b.events.push({
       type: 'damage',
       id: target.id,
@@ -1244,45 +1371,50 @@
     u.casts++;
     const power = u.power,
       atk = u.atk;
+    const sp = SKILLS[u.type].params;
     const foes = alive(b, 1 - u.side),
       friends = alive(b, u.side);
     b.events.push({ type: 'cast', id: u.id, pos: u.pos, name: TYPES[u.type].skill, unitType: u.type, to: target.pos });
     switch (u.type) {
       case 'guard':
-        shield(b, u, u, (90 + atk * 0.8) * power);
-        u.taunt = b.time + 2.5;
+        shield(b, u, u, (sp.flat + atk * sp.ratio) * power);
+        u.taunt = b.time + sp.taunt;
         break;
       case 'knight':
-        friends.filter(v => distance(v.pos, u.pos) <= 1).forEach(v => shield(b, u, v, (55 + atk * 0.7) * power));
+        friends
+          .filter(v => distance(v.pos, u.pos) <= 1)
+          .forEach(v => shield(b, u, v, (sp.flat + atk * sp.ratio) * power));
         break;
       case 'ranger':
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < sp.shots; i++) {
           b.events.push({ type: 'volley', from: u.pos, to: target.pos, unitType: u.type, delay: i * 0.07 });
-          hurt(b, u, target, atk * 0.8 * power);
+          hurt(b, u, target, atk * sp.ratio * power);
         }
         break;
       case 'mage':
-        foes.filter(v => distance(v.pos, target.pos) <= 1).forEach(v => hurt(b, u, v, atk * 2.1 * power, 'magic'));
+        foes
+          .filter(v => distance(v.pos, target.pos) <= sp.radius)
+          .forEach(v => hurt(b, u, v, atk * sp.ratio * power, 'magic'));
         break;
       case 'healer':
         friends
           .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)
-          .slice(0, 2)
+          .slice(0, sp.targets)
           .forEach(v => {
             v.stun = 0;
             v.slow = 0;
             v.wither = 0;
-            heal(b, u, v, (55 + atk * 1.4) * power);
+            heal(b, u, v, (sp.flat + atk * sp.ratio) * power);
           });
         break;
       case 'oracle':
         friends
           .filter(v => v !== u)
           .sort((a, b) => a.mana - b.mana)
-          .slice(0, 2)
+          .slice(0, sp.targets)
           .forEach(v => {
-            v.mana = Math.min(100, v.mana + 38 * power);
-            heal(b, u, v, atk * 0.9 * power);
+            v.mana = Math.min(MAX_MANA, v.mana + sp.mana * power);
+            heal(b, u, v, atk * sp.ratio * power);
           });
         break;
       case 'rogue': {
@@ -1298,34 +1430,34 @@
         const struck = distance(u.pos, victim.pos) <= 1 ? victim : target;
         u.targetId = struck.id;
         u.targetReason = 'skill';
-        hurt(b, u, struck, atk * 2.3 * power);
+        hurt(b, u, struck, atk * sp.ratio * power);
         break;
       }
       case 'frost':
-        hurt(b, u, target, atk * 1.5 * power, 'magic');
-        target.stun = Math.max(target.stun, b.time + 1.5);
-        foes.filter(v => distance(v.pos, target.pos) <= 1).forEach(v => (v.slow = Math.max(v.slow, b.time + 3)));
+        hurt(b, u, target, atk * sp.ratio * power, 'magic');
+        target.stun = Math.max(target.stun, b.time + sp.stun);
+        foes.filter(v => distance(v.pos, target.pos) <= 1).forEach(v => (v.slow = Math.max(v.slow, b.time + sp.slow)));
         break;
       case 'hunter':
         foes
           .filter(v => !(v.stealthUntil > b.time))
           .sort((a, b) => distance(u.pos, b.pos) - distance(u.pos, a.pos))
-          .slice(0, 2)
+          .slice(0, sp.targets)
           .forEach((v, i) => {
             if (i === 0) {
               u.targetId = v.id;
               u.targetReason = 'skill';
             }
             b.events.push({ type: 'volley', from: u.pos, to: v.pos, unitType: u.type, delay: 0 });
-            hurt(b, u, v, atk * 1.6 * power, 'true');
+            hurt(b, u, v, atk * sp.ratio * power, 'true');
           });
         break;
       case 'warden':
         friends
           .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp || TYPES[b.type].range - TYPES[a.type].range)
-          .slice(0, 2)
+          .slice(0, sp.targets)
           .forEach(v => {
-            shield(b, u, v, (65 + atk) * power);
+            shield(b, u, v, (sp.flat + atk * sp.ratio) * power);
             const threat = foes.find(e => !e.dead && distance(e.pos, v.pos) <= 1);
             if (threat) {
               const p = neighbors(threat.pos)
@@ -1335,7 +1467,7 @@
                 b.events.push({ type: 'push', id: threat.id, from: threat.pos, to: p });
                 threat.pos = p;
               }
-              threat.slow = Math.max(threat.slow, b.time + 2);
+              threat.slow = Math.max(threat.slow, b.time + sp.slow);
             }
           });
         break;
@@ -1345,77 +1477,77 @@
           .sort((a, b) => b.shield - a.shield || distance(u.pos, a.pos) - distance(u.pos, b.pos))[0];
         u.targetId = victim.id;
         u.targetReason = 'skill';
-        const broken = Math.min(victim.shield, Math.round((100 + atk * 2) * power));
+        const broken = Math.min(victim.shield, Math.round((sp.breakFlat + atk * sp.breakRatio) * power));
         consumeShield(victim, broken);
         b.events.push({ type: 'shatter', id: victim.id, pos: victim.pos, from: u.pos, value: broken });
-        hurt(b, u, victim, atk * 1.7 * power, 'magic');
+        hurt(b, u, victim, atk * sp.ratio * power, 'magic');
         break;
       }
       case 'hexer':
         foes
-          .filter(v => distance(v.pos, target.pos) <= 1)
+          .filter(v => distance(v.pos, target.pos) <= sp.radius)
           .forEach(v => {
-            hurt(b, u, v, atk * 1.4 * power, 'magic');
-            v.wither = Math.max(v.wither || 0, b.time + 5);
+            hurt(b, u, v, atk * sp.ratio * power, 'magic');
+            v.wither = Math.max(v.wither || 0, b.time + sp.wither);
           });
         break;
       case 'oakmaul': {
         const struck = foes.filter(v => distance(u.pos, v.pos) <= 1);
-        struck.forEach(v => hurt(b, u, v, atk * 1.7 * power));
-        if (struck.length) heal(b, u, u, (40 + atk * 0.6) * power);
+        struck.forEach(v => hurt(b, u, v, atk * sp.ratio * power));
+        if (struck.length) heal(b, u, u, (sp.healFlat + atk * sp.healRatio) * power);
         break;
       }
       case 'duskblade':
-        hurt(b, u, target, atk * 2.3 * power);
-        heal(b, u, u, (45 + atk * 0.8) * power);
+        hurt(b, u, target, atk * sp.ratio * power);
+        heal(b, u, u, (sp.healFlat + atk * sp.healRatio) * power);
         break;
       case 'tideguard': {
-        shield(b, u, u, (65 + atk) * power);
+        shield(b, u, u, (sp.flat + atk * sp.ratio) * power);
         const ally = friends.filter(v => v !== u).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
-        if (ally) shield(b, u, ally, (65 + atk) * power);
+        if (ally) shield(b, u, ally, (sp.flat + atk * sp.ratio) * power);
         break;
       }
       case 'wavecaller':
         foes
           .filter(v => Math.floor(v.pos / COLS) === Math.floor(target.pos / COLS))
-          .forEach(v => hurt(b, u, v, atk * 1.5 * power, 'magic'));
+          .forEach(v => hurt(b, u, v, atk * sp.ratio * power, 'magic'));
         break;
       case 'pearl':
-        heal(b, u, friends.sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0], (95 + atk * 2) * power);
+        heal(b, u, friends.sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0], (sp.flat + atk * sp.ratio) * power);
         break;
       case 'songbird':
         friends
           .sort((a, b) => b.atk - a.atk)
-          .slice(0, 2)
-          .forEach(v => shield(b, u, v, (70 + atk * 1.1) * power));
+          .slice(0, sp.targets)
+          .forEach(v => shield(b, u, v, (sp.flat + atk * sp.ratio) * power));
         break;
       case 'emberguard':
-        shield(b, u, u, (75 + atk) * power);
-        foes.filter(v => distance(u.pos, v.pos) <= 1).forEach(v => hurt(b, u, v, atk * 0.8 * power, 'magic'));
+        shield(b, u, u, (sp.flat + atk * sp.ratio) * power);
+        foes.filter(v => distance(u.pos, v.pos) <= 1).forEach(v => hurt(b, u, v, atk * sp.splash * power, 'magic'));
         break;
       case 'cinder':
-        hurt(b, u, target, atk * 3.3 * power, 'magic');
+        hurt(b, u, target, atk * sp.ratio * power, 'magic');
         break;
       case 'flarebow':
         foes
           .filter(v => !(v.stealthUntil > b.time))
           .sort((a, b) => distance(u.pos, a.pos) - distance(u.pos, b.pos))
-          .slice(0, 2)
+          .slice(0, sp.targets)
           .forEach(v => {
             b.events.push({ type: 'volley', from: u.pos, to: v.pos, unitType: u.type, delay: 0 });
-            hurt(b, u, v, atk * 1.5 * power);
+            hurt(b, u, v, atk * sp.ratio * power);
           });
         break;
       case 'sparkscout':
-        hurt(b, u, target, atk * 2 * power);
-        target.stun = Math.max(target.stun, b.time + 1);
+        hurt(b, u, target, atk * sp.ratio * power);
+        target.stun = Math.max(target.stun, b.time + sp.stun);
         break;
       case 'ancient':
-        foes.forEach(v => hurt(b, u, v, atk * 0.85 * power, 'magic'));
+        foes.forEach(v => hurt(b, u, v, atk * sp.ratio * power, 'magic'));
         break;
     }
     if (!u.dead && u.castMana) {
-      u.mana = Math.min(100, u.mana + u.castMana);
+      u.mana = Math.min(MAX_MANA, u.mana + u.castMana);
       proc(b, u, '回响沙漏');
     }
     if (!u.dead && u.castWard && u.casts % 3 === 0) {
@@ -1442,13 +1574,13 @@
         u.shield = Math.max(0, u.shield - u.tempShield);
         u.tempShield = 0;
       }
-      u.mana = Math.min(100, u.mana + u.manaRegen * dt);
+      u.mana = Math.min(MAX_MANA, u.mana + u.manaRegen * dt);
       u.attackCd = Math.max(0, u.attackCd - dt);
       u.moveCd = Math.max(0, u.moveCd - dt);
       if (u.regen) u.hp = Math.min(u.maxHp, u.hp + u.maxHp * u.regen * dt * (u.wither > b.time ? 0.5 : 1));
       if (u.type === 'ancient' && u.hp / u.maxHp <= 0.5 && !u.furious) {
         u.furious = true;
-        u.interval = u.baseInterval / 1.35;
+        u.interval = u.baseInterval / (1 + SKILLS.ancient.params.fury);
         b.events.push({ type: 'cast', id: u.id, pos: u.pos, name: '古树狂怒', unitType: 'ancient', to: u.pos });
       }
       if (b.enrage && !u.overtime) {
@@ -1458,9 +1590,9 @@
         u.regen = 0;
       }
     }
-    for (const u of alive(b).filter(u => u.ambushPending && b.time >= 1.5 && u.stun <= b.time)) {
+    for (const u of alive(b).filter(u => u.ambushPending && b.time >= AMBUSH_SECONDS && u.stun <= b.time)) {
       u.ambushPending = false;
-      u.stealthUntil = b.time + 1;
+      u.stealthUntil = b.time + STEALTH_SECONDS;
       const targets = alive(b, 1 - u.side)
         .filter(v => !(v.stealthUntil > b.time))
         .sort((a, b) => TYPES[b.type].range - TYPES[a.type].range || a.maxHp - b.maxHp);
@@ -1485,7 +1617,7 @@
       const sorted = foes.sort(
         (a, v) => distance(u.pos, a.pos) - distance(u.pos, v.pos) || a.hp - v.hp || a.id.localeCompare(v.id),
       );
-      const taunter = sorted.find(v => v.taunt > b.time && distance(u.pos, v.pos) <= 3);
+      const taunter = sorted.find(v => v.taunt > b.time && distance(u.pos, v.pos) <= TAUNT_RANGE);
       const inRange = sorted.filter(v => distance(u.pos, v.pos) <= u.range);
       let target = taunter || inRange[0] || sorted[0];
       u.targetId = target.id;
@@ -1527,7 +1659,7 @@
         const raw = u.atk * (0.96 + random(b) * 0.08) * (critical ? u.critPower : 1);
         b.events.push({ type: 'attack', id: u.id, from: u.pos, to: target.pos, unitType: u.type, ranged: u.range > 1 });
         hurt(b, u, target, raw, 'physical', true, critical);
-        u.mana = Math.min(100, u.mana + 21);
+        u.mana = Math.min(MAX_MANA, u.mana + 21);
         u.attackCd = u.interval * (u.slow > b.time ? 1.4 : 1);
         if (critical) u.critCount++;
       }
@@ -2465,6 +2597,7 @@
     runQuery,
     parseRunLink,
     TYPES,
+    SKILLS,
     FACTIONS,
     ROLES,
     ROLE_TRAITS,

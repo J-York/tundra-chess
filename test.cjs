@@ -1649,4 +1649,43 @@ check('Refined equipment scales only its stats, and every description is generat
   assert.ok(E.ITEMS.heartwood.desc.includes('最大生命 25% 的护盾'));
 });
 
+check('Every skill number comes from its params, and every description is rendered from them', () => {
+  const source = require('node:fs').readFileSync(require.resolve('./engine.js'), 'utf8');
+  const body = source.slice(source.indexOf('function cast(b, u, target)'), source.indexOf('function step(b, dt'));
+  assert.ok(body.includes('SKILLS[u.type].params'), 'cast must read its numbers from the params table');
+  // Anything tunable has to live in params. What may stay inline: 0 and 1 (identity and
+  // adjacency), MAX_MANA's own arithmetic, the chorus cadence, and the volley draw delay.
+  const allowed = new Set(['0', '1', '3', '0.07']);
+  const literals = [...body.matchAll(/[^\w.$]([0-9]+(?:\.[0-9]+)?)/g)]
+    .map(m => m[1])
+    .filter(value => !allowed.has(value));
+  assert.deepEqual(literals, [], 'move these numbers into SKILLS params: ' + literals.join(', '));
+
+  for (const [type, def] of Object.entries(E.TYPES)) {
+    const skill = E.SKILLS[type];
+    assert.ok(skill, type + ' must declare its skill params');
+    assert.equal(def.desc, skill.text(skill.params), type + ' description must be rendered from its params');
+    assert.ok(Object.keys(skill.params).length, type + ' must declare at least one number');
+  }
+
+  // The link has to be live: change a number and the description must follow it.
+  for (const [type, skill] of Object.entries(E.SKILLS)) {
+    for (const key of Object.keys(skill.params)) {
+      const tweaked = { ...skill.params, [key]: skill.params[key] * 2 + 1 };
+      assert.notEqual(
+        skill.text(tweaked),
+        skill.text(skill.params),
+        type + '.' + key + ' is declared but never reaches the description',
+      );
+    }
+  }
+
+  // Numbers the rules share with the prose really are the ones the battle uses.
+  const s = E.newRun({ seed: 31 });
+  s.units = [E.unit(s, 'guard', 20), E.unit(s, 'rogue', 32)];
+  E.createBattle(s);
+  const rogue = s.battle.units.find(u => u.type === 'rogue' && !u.side);
+  assert.equal(rogue.stealthUntil, 2.5, 'ambush plus stealth must match the described 1.5 + 1 seconds');
+});
+
 console.log(`\n${checks} rule checks passed.`);
