@@ -76,7 +76,11 @@ if not args.verify_release:
     pathlib.Path({remote_archive!r}).unlink()
     print(str(release))
     """
-        subprocess.run(["ssh", "boh", "python3", "-"], input=textwrap.dedent(script), text=True, check=True)
+        # /personal/tundra-chess and every release directory published so far are root-owned,
+        # so the write side runs under sudo. The read-only checks below stay unprivileged.
+        subprocess.run(
+            ["ssh", "boh", "sudo", "python3", "-"], input=textwrap.dedent(script), text=True, check=True
+        )
 
 # Recheck the actual current release before public verification or recording success.
 source_check = f"""
