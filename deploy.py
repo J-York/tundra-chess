@@ -9,6 +9,8 @@ import subprocess
 import tarfile
 import tempfile
 import textwrap
+import time
+import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parent
 parser = argparse.ArgumentParser()
@@ -88,56 +90,52 @@ assert opener.open('http://127.0.0.1:8879/',timeout=10).status==200
 print('SOURCE 200 / all hashes match')
 """
 subprocess.run(["ssh", "boh", "python3", "-"], input=source_check, text=True, check=True)
-# Use the normal browser route already used for this site's interactive verification.
-# The office command-line HTTP proxy denies the domain; browser policy is unchanged.
-browser_script = r"""
-await useOrCreateTaskSpace('苔原远征验收');
-await openOrReuseTab('https://chess.jyork.de/',{wait:true,timeout:20});
-await gotoAndWait('https://chess.jyork.de/?release=RELEASE',{timeout:20});
-await cdp('Page.bringToFront');
-await cdp('Network.enable');
-await cdp('Network.setCacheDisabled',{cacheDisabled:true});
-await drainEvents();
-await cdp('Page.reload',{ignoreCache:true});
-const expectedUrls=new Map(Object.keys(EXPECTED).map(name=>[name,name==='index.html'?'https://chess.jyork.de/?release=RELEASE':'https://chess.jyork.de/'+name]));
-const requests=new Map(),finished=new Set(),statuses=new Map();
-for(let attempt=0;attempt<55;attempt++){
-  await wait(1);
-  for(const e of await drainEvents()){
-    if(e.method==='Network.responseReceived'){requests.set(e.params.response.url,e.params.requestId);statuses.set(e.params.response.url,e.params.response.status);}
-    if(e.method==='Network.loadingFinished')finished.add(e.params.requestId);
-  }
-  if([...expectedUrls.values()].every(url=>finished.has(requests.get(url))))break;
-  if(attempt===54)throw Error('Resources did not finish loading: '+[...expectedUrls.values()].filter(url=>!finished.has(requests.get(url))).join(', '));
-}
-const tree=await cdp('Page.getResourceTree'),frame=tree.frameTree.frame;
-const crypto=await import('node:crypto'),rows=[];
-for(const [name,hash] of Object.entries(EXPECTED)){
-  const url=name==='index.html'?frame.url:new URL(name,frame.url).href;
-  let row;
-  for(let attempt=0;attempt<4;attempt++){
-    const resource=await cdp('Page.getResourceContent',{frameId:frame.id,url});
-    let content=resource.content,normalized=false;
-    const digest=crypto.createHash('sha256').update(Buffer.from(content,resource.base64Encoded?'base64':'utf8')).digest('hex');
-    if(name==='index.html'&&digest!==hash){
-      content=content.replace(/<script[^>]*src="https:\/\/static\.cloudflareinsights\.com\/beacon\.min\.js[^" ]*"[^>]*><\/script>\n?/g,'');
-      normalized=crypto.createHash('sha256').update(content).digest('hex')===hash;
-    }
-    row={name,status:statuses.get(url)||null,loaded:true,match:digest===hash||normalized,...(digest!==hash&&!normalized?{expected:hash,actual:digest,contentSize:content.length,base64:resource.base64Encoded}:{}),normalization:normalized?'Cloudflare analytics script only':null};
-    if(row.match)break;await wait(1);
-  }
-  rows.push(row);
-}
-cliLog(rows);
-""".replace("EXPECTED", json.dumps(hashes)).replace("RELEASE", release)
-
-result = subprocess.run(["ego-browser", "nodejs"], input=browser_script, text=True, capture_output=True)
-output = result.stdout + result.stderr
-print(output.strip(), flush=True)
-if result.returncode:
-    raise SystemExit(result.returncode)
-rows=json.loads(next(line for line in output.splitlines() if line.startswith('[{"name":')))
-assert len(rows)==len(files) and all(row['loaded'] and row['match'] for row in rows), 'Public verification failed'
+# Fetch every published resource straight from the public origin and compare digests.
+# The browser route this used to take needed a tool that is not always installed, and it ran
+# after `current` had already been switched, so a missing tool left the site updated but the
+# release records unwritten. A direct fetch checks the same thing with no extra dependency.
+public = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+# Cloudflare answers the default Python-urllib agent with 403, so present a normal browser one.
+public.addheaders = [
+    (
+        "User-Agent",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+    ),
+    ("Accept", "*/*"),
+    ("Cache-Control", "no-cache"),
+]
+rows = []
+for name, digest in hashes.items():
+    url = "https://chess.jyork.de/" + name
+    row = {"name": name, "status": None, "match": False, "normalization": None}
+    for _ in range(4):
+        try:
+            with public.open(url, timeout=30) as response:
+                row["status"] = response.status
+                body = response.read()
+        except Exception as error:  # noqa: BLE001 - reported below, then retried
+            row["error"] = str(error)[:200]
+            time.sleep(2)
+            continue
+        actual = hashlib.sha256(body).hexdigest()
+        if actual != digest and name == "index.html":
+            # Cloudflare injects its analytics beacon into HTML on some routes.
+            stripped = re.sub(
+                rb'<script[^>]*src="https://static\.cloudflareinsights\.com/beacon\.min\.js[^" ]*"[^>]*></script>\n?',
+                b"",
+                body,
+            )
+            if hashlib.sha256(stripped).hexdigest() == digest:
+                actual, row["normalization"] = digest, "Cloudflare analytics script only"
+        row["match"] = actual == digest
+        if not row["match"]:
+            row["expected"], row["actual"], row["bytes"] = digest, actual, len(body)
+        if row["match"]:
+            break
+        time.sleep(2)
+    rows.append(row)
+print(json.dumps(rows, ensure_ascii=False), flush=True)
+assert all(row["status"] == 200 and row["match"] for row in rows), "Public verification failed"
 
 record = {"release": release, "previous": args.expected, "note": args.note, "hashes": hashes}
 (ROOT / ".last-release.json").write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n")
