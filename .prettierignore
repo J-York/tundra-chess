@@ -1,0 +1,8 @@
+node_modules/
+assets/
+# Generated snapshot fixtures: single-line data, never hand-edited.
+tests/feedback-fixtures.js
+tests/service-fixtures.js
+tests/v3-fixtures.js
+tests/legacy-twelve-save.json
+.last-release.json
