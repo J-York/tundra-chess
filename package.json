@@ -14,7 +14,8 @@
     "balance": "node balance.cjs 30",
     "fingerprint": "node fingerprint.cjs",
     "serve": "python3 -m http.server 8879 --bind 127.0.0.1",
-    "verify": "npm run check && npm run lint && npm run format:check && npm test"
+    "verify": "npm run check && npm run lint && npm run format:check && npm test && npm run browser-test",
+    "browser-test": "node --experimental-websocket browser-test.cjs"
   },
   "devDependencies": {
     "eslint": "^9.39.0",
