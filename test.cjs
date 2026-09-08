@@ -1598,4 +1598,23 @@ check('Every faction is equally reachable in the tavern and every origin opens o
   }
   assert.ok(Math.max(...values) - Math.min(...values) <= 1, 'origins must open within one gold of each other');
 });
+check('Difficulty ladder is ordered and its shown percentage is derived from the multiplier', () => {
+  const scales = Object.values(E.DIFFICULTIES).map(d => d.scale);
+  assert.deepEqual(
+    scales,
+    [...scales].sort((a, b) => a - b),
+    'difficulties must be ordered by enemy strength',
+  );
+  const base = E.DIFFICULTIES.normal.scale;
+  for (const [id, d] of Object.entries(E.DIFFICULTIES)) {
+    if (id === 'normal') continue;
+    const delta = Math.round((d.scale / base - 1) * 100);
+    assert.ok(d.desc.includes(`${delta > 0 ? '+' : '\u2212'}${Math.abs(delta)}%`), id + ' must state its real delta');
+  }
+  // The multiplier has to reach the battle, not just the description.
+  const s = E.newRun({ seed: 5, difficulty: 'hard' });
+  const easy = E.newRun({ seed: 5, difficulty: 'story' });
+  assert.ok(E.enemyScale(s) > E.enemyScale(easy) * 1.2);
+});
+
 console.log(`\n${checks} rule checks passed.`);

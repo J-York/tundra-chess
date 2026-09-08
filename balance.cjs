@@ -204,8 +204,8 @@ function run(seed, origin = 'forest', difficulty = 'normal', risky = false, chal
 if (require.main === module) {
   const n = Number(process.argv[2] || 12),
     rows = [];
-  for (const difficulty of ['story', 'normal', 'hard'])
-    for (const origin of ['forest', 'astral', 'moon']) {
+  for (const difficulty of Object.keys(E.DIFFICULTIES))
+    for (const origin of Object.keys(E.ORIGINS)) {
       const runs = Array.from({ length: n }, (_, i) => run(1000 + i * 37, origin, difficulty));
       rows.push({
         difficulty,
@@ -217,5 +217,14 @@ if (require.main === module) {
       });
     }
   console.table(rows);
+  for (const difficulty of Object.keys(E.DIFFICULTIES)) {
+    const group = rows.filter(r => r.difficulty === difficulty);
+    const wins = group.reduce((a, r) => a + Number(r.wins.split('/')[0]), 0);
+    console.log(
+      difficulty.padEnd(6),
+      wins + '/' + group.length * n,
+      ((wins / (group.length * n)) * 100).toFixed(0) + '%',
+    );
+  }
 }
 module.exports = { manage, advance, run };

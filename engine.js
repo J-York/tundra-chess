@@ -566,11 +566,18 @@
       icon: '♨',
     },
   };
+  // Enemy strength is an absolute multiplier; the shown percentage is derived from it so the
+  // copy can never drift from the rule. Values are set from balance.cjs: at 冒险 the reference
+  // bot finishes about four runs in five, at 险境 about one in two.
   const DIFFICULTIES = {
-    story: { name: '悠游', desc: '敌人强度 −15%，适合初次远征', scale: 0.85 },
-    normal: { name: '冒险', desc: '标准挑战，每一次选择都很重要', scale: 1 },
-    hard: { name: '险境', desc: '敌人强度 +20%，远征损耗更高', scale: 1.2 },
+    story: { name: '悠游', note: '适合初次远征', scale: 0.94 },
+    normal: { name: '冒险', note: '标准挑战，每一次选择都很重要', scale: 1.1 },
+    hard: { name: '险境', note: '远征损耗更高，容错很小', scale: 1.19 },
   };
+  for (const [id, d] of Object.entries(DIFFICULTIES)) {
+    const delta = Math.round((d.scale / DIFFICULTIES.normal.scale - 1) * 100);
+    d.desc = id === 'normal' ? d.note : `敌人强度 ${delta > 0 ? '+' : '−'}${Math.abs(delta)}%，${d.note}`;
+  }
   const CHALLENGES = {
     none: { name: '标准远征', desc: '沿用完整规则，自由组建队伍。' },
     quartet: { name: '四人同行', desc: '最多上阵 4 人，考验升星、站位与角色取舍。' },
