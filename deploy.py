@@ -28,6 +28,15 @@ print(checks.stdout.strip().splitlines()[-1], flush=True)
 for filename in ["world.js", "engine.js", "game.js", "art.js", "audio.js"]:
     subprocess.run(["node", "--check", filename], cwd=ROOT, check=True)
 
+# Lint and formatting gate the release too, but only when the dev tooling is installed:
+# the published site itself has no dependencies, so a clean checkout can still deploy.
+if (ROOT / "node_modules").is_dir():
+    for tool in (["npx", "eslint", "."], ["npx", "prettier", "--check", "."]):
+        subprocess.run(tool, cwd=ROOT, check=True)
+    print("eslint and prettier clean", flush=True)
+else:
+    print("node_modules missing: skipping eslint / prettier (run npm install to gate on them)", flush=True)
+
 files = json.loads((ROOT / "release-files.json").read_text())
 assert len(files) == len(set(files))
 assert all(not pathlib.Path(f).is_absolute() and ".." not in pathlib.Path(f).parts and (ROOT / f).is_file() for f in files)
