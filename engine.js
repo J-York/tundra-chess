@@ -408,6 +408,21 @@
       desc: ['全队普攻暴击率 +15%', '全队普攻暴击率 +30%，暴击伤害提高至 175%'],
     },
   };
+  // Factions hold different numbers of companions (林地 6 … 潮汐 / 余烬 4) but share the same
+  // 2 / 3 thresholds, so an unweighted tavern makes a small faction measurably harder to assemble.
+  // Every companion of an under-sized faction gets one extra copy per missing member, which
+  // levels the odds of meeting *some* member of each faction while keeping cost rarity inside it.
+  const FACTION_ROSTER = {};
+  for (const def of Object.values(TYPES)) {
+    if (!def.cost) continue;
+    for (const id of [def.faction, def.extraFaction]) if (id) FACTION_ROSTER[id] = (FACTION_ROSTER[id] || 0) + 1;
+  }
+  const LARGEST_FACTION = Math.max(...Object.values(FACTION_ROSTER));
+  const shopCopies = type => {
+    const def = TYPES[type];
+    const smallest = Math.min(...[def.faction, def.extraFaction].filter(Boolean).map(id => FACTION_ROSTER[id]));
+    return (def.cost === 4 ? 2 : 3) + (LARGEST_FACTION - smallest);
+  };
   const ROLES = { guardian: '守卫', ranger: '游侠', mage: '法师', support: '辅助', assassin: '刺客' };
   const ROLE_TRAITS = {
     guardian: { name: '铁壁', icon: '⬡', desc: '2 种守卫：全队护甲 +8' },
@@ -506,11 +521,15 @@
     NODES = W.NODES,
     AFFIXES = W.AFFIXES,
     EVENTS = W.EVENTS;
+  // Every origin opens on the same value: the two starters plus the starting gold total 15
+  // (月影突袭 has always been one ahead at 16). `opening` is the first tavern batch, and always
+  // offers one more companion of the origin's own faction.
   const ORIGINS = {
     forest: {
       name: '林地守望',
       desc: '守卫 + 游侠 · 生命羁绊，稳健开局',
       types: ['guard', 'ranger'],
+      opening: ['healer', 'frost', 'mage'],
       gold: 11,
       icon: '❧',
     },
@@ -518,6 +537,7 @@
       name: '群星秘术',
       desc: '骑士 + 法师 · 技能羁绊，爆发法术',
       types: ['knight', 'mage'],
+      opening: ['healer', 'frost', 'mage'],
       gold: 9,
       icon: '✧',
     },
@@ -525,8 +545,25 @@
       name: '月影突袭',
       desc: '刺客 + 猎手 · 暴击羁绊，直取后排',
       types: ['rogue', 'hunter'],
+      opening: ['healer', 'frost', 'mage'],
       gold: 9,
       icon: '☽',
+    },
+    tide: {
+      name: '潮汐同舟',
+      desc: '守卫 + 法师 · 护盾羁绊，稳步推进',
+      types: ['tideguard', 'wavecaller'],
+      opening: ['pearl', 'healer', 'mage'],
+      gold: 10,
+      icon: '≈',
+    },
+    ember: {
+      name: '余烬行军',
+      desc: '守卫 + 游侠 · 攻击羁绊，火力压制',
+      types: ['emberguard', 'flarebow'],
+      opening: ['sparkscout', 'healer', 'mage'],
+      gold: 10,
+      icon: '♨',
     },
   };
   const DIFFICULTIES = {
@@ -702,7 +739,7 @@
     };
     s.units = ORIGINS[origin].types.map(t => unit(s, t, TYPES[t].range === 1 ? 20 : 32));
     if (s.units[0].pos === s.units[1].pos) s.units[1].pos++;
-    s.shop = [...ORIGINS[origin].types, 'healer', 'frost', 'mage'];
+    s.shop = [...ORIGINS[origin].types, ...ORIGINS[origin].opening];
     return s;
   }
   const factionIds = type => [TYPES[type].faction, ...(TYPES[type].extraFaction ? [TYPES[type].extraFaction] : [])];
@@ -774,7 +811,7 @@
   function rollShop(s) {
     const pool = Object.keys(TYPES)
       .filter(t => TYPES[t].cost > 0)
-      .flatMap(t => Array(TYPES[t].cost === 4 ? 2 : 3).fill(t));
+      .flatMap(t => Array(shopCopies(t)).fill(t));
     const offers = Array.from({ length: 5 }, () => choose(pool, s));
     const owned = s.units.filter(u => u.star < 3 && !s.units.some(v => v.type === u.type && v.star === 3));
     const pairs = owned.filter(u => u.star === 1 && owned.filter(v => v.type === u.type && v.star === 1).length === 2);

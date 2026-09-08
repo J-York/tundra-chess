@@ -2814,9 +2814,6 @@ dialog .eyebrow {
   .choice small {
     margin-top: 5px;
   }
-  .origin-choices {
-    grid-template-columns: repeat(3, 1fr);
-  }
   .origin-choices .choice {
     padding: 10px 7px;
   }
@@ -4448,8 +4445,9 @@ dialog[data-kind="report"] #modal-content {
     font-size: 20px;
   }
 }
+/* One card per origin, on one row: five at 780px dialog width, fewer as the dialog narrows. */
 .origin-choices {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
 }
 .origin-choices .choice {
   min-width: 0;

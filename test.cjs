@@ -1563,4 +1563,39 @@ check('Old twelve-hero saves and journal records remain readable while old share
   assert.equal(r.rules, 'twelve-1');
   assert.ok(E.validRecord(r));
 });
+check('Every faction is equally reachable in the tavern and every origin opens on comparable value', () => {
+  const recruitable = Object.keys(E.TYPES).filter(t => E.TYPES[t].cost > 0);
+  // Sample the offer pool through the public shop roll, ignoring the growth slot that
+  // deliberately repeats a companion the player already owns.
+  const s = E.newRun({ seed: 4242 });
+  s.units = [];
+  const seen = {};
+  for (let i = 0; i < 8000; i++) for (const type of E.rollShop(s)) seen[type] = (seen[type] || 0) + 1;
+  const perFaction = {};
+  let total = 0;
+  for (const type of recruitable) {
+    total += seen[type] || 0;
+    for (const faction of E.factionIds(type)) perFaction[faction] = (perFaction[faction] || 0) + (seen[type] || 0);
+  }
+  assert.equal(Object.keys(perFaction).length, Object.keys(E.FACTIONS).length, 'every faction must be offered');
+  const shares = Object.values(perFaction).map(n => n / total);
+  assert.ok(
+    Math.max(...shares) / Math.min(...shares) < 1.15,
+    'faction offer rates must stay within 15%: ' + JSON.stringify(perFaction),
+  );
+
+  const values = [];
+  for (const [id, origin] of Object.entries(E.ORIGINS)) {
+    const run = E.newRun({ seed: 99, origin: id });
+    assert.ok(E.validate(run), id + ' must start valid');
+    assert.equal(E.traits(run.units)[id], 2, id + ' must open on its own two-companion bond');
+    assert.ok(
+      origin.opening.some(t => E.hasFaction(t, id)),
+      id + ' must be offered a third companion of its own faction',
+    );
+    assert.equal(new Set(run.units.map(u => u.pos)).size, run.units.length, id + ' starters must not overlap');
+    values.push(origin.types.reduce((n, t) => n + E.TYPES[t].cost, 0) + origin.gold);
+  }
+  assert.ok(Math.max(...values) - Math.min(...values) <= 1, 'origins must open within one gold of each other');
+});
 console.log(`\n${checks} rule checks passed.`);
