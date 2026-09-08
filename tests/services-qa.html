@@ -1,61 +1,200 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><base href="../">
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#101c1c"><meta name="description" content="招募森林伙伴，搭配羁绊与装备，探索三章随机旅途。一个有声的单人策略自走棋。">
-  <title>苔原远征 · 长夜行旅</title><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%23132320'/%3E%3Cpath d='M32 8 52 32 32 56 12 32Z' fill='%23c7dca1'/%3E%3Cpath d='M32 20 41 32 32 44 23 32Z' fill='%23132320'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-<div class="ambient" aria-hidden="true"></div>
-<div class="app">
-  <header>
-    <a class="brand" href="./" aria-label="苔原远征首页"><span class="brand-mark">❖</span><span>苔原远征<small>TUNDRA EXPEDITION</small></span></a>
-    <div class="chapter"><i></i><span>长夜行旅</span><b>单人策略冒险</b></div>
-    <div class="header-actions"><button id="sound" class="icon-button" aria-label="关闭音效" title="音效 · M">♫</button><button id="settings" class="icon-button" aria-label="声音与设置" title="声音与设置">⚙</button><button id="help" class="quiet">旅人指南 <span>↗</span></button></div>
-  </header>
-  <main>
-    <section class="heading"><div><div class="eyebrow">A SMALL BAND. AN EXTRAORDINARY JOURNEY.</div><h1>万物有灵，向林而行<span>。</span></h1><p>与伙伴并肩，把每一步抉择，写成属于你的远征。</p></div><div class="journey-actions"><span id="difficulty-badge" class="subtle-badge"></span><button id="restart" class="quiet">↻ 新的远征</button></div></section>
-    <nav id="route" aria-label="三章远征地图"></nav>
-    <div class="layout">
-      <aside class="panel expedition">
-        <div class="section-label">旅人的行囊 <span>EXPEDITION</span></div>
-        <div class="life"><span>♥</span><strong id="life">100</strong><small>/ 100</small><span id="life-status">状态良好</span></div><div class="life-track"><i id="life-bar"></i></div>
-        <div class="resources"><div><small>远征金币</small><strong class="gold">◈ <span id="gold">11</span></strong></div><div><small>上阵人口</small><strong id="population">2 / 3</strong></div></div>
-        <div class="income-line" id="income"></div><button id="expand" class="secondary full">扩充队伍 <span>◈ 4</span></button>
-        <div class="divider"></div><div class="section-label">队伍羁绊 <span>SYNERGIES</span></div><div id="synergies"></div>
-        <div class="divider"></div><div class="section-label">旅途遗物 <span id="relic-count">0</span></div><div id="relics"></div>
-        <div class="divider"></div><div class="section-label">装备行囊 <span id="bag-count"></span></div><p class="tiny muted">选择伙伴，再点击装备穿戴。</p><div id="bag" class="bag"></div>
-        <div class="save-status" id="save-status"><i></i> 进度已保存</div><button id="status-toggle" class="status-toggle" aria-expanded="false" aria-controls="synergies relics bag">羁绊与行囊 ▾</button>
-      </aside>
-      <section class="arena-section">
-        <div class="arena-top"><div><span class="eyebrow" id="stage-label"></span><h2 id="stage-title"></h2></div><span id="phase" class="badge"></span></div>
-        <div class="stage-modifier" id="stage-modifier"></div>
-        <div class="arena" id="arena">
-          <div class="scene-vignette"></div><div class="fireflies" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
-          <div class="board-label top"><span><i class="enemy-dot"></i>敌方阵地</span><span id="enemy-power"></span></div>
-          <div class="playfield" id="playfield"><div id="board" class="board" aria-label="六列六排战场"></div><div id="actors" class="actors"></div><svg id="target-link" class="target-link" viewBox="0 0 600 600" preserveAspectRatio="none" aria-hidden="true"></svg><div id="range-legend" class="range-legend" hidden></div><svg id="effects" class="effects" viewBox="0 0 600 600" preserveAspectRatio="none" aria-hidden="true"></svg><div id="floaters" class="floaters" aria-hidden="true"></div></div>
-          <div class="board-label bottom"><span><i></i>我方阵地</span><span id="formation-power"></span></div>
-          <div id="travel-surface" class="travel-surface" hidden></div>
+  <head>
+    <base href="../" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#101c1c" />
+    <meta name="description" content="招募森林伙伴，搭配羁绊与装备，探索三章随机旅途。一个有声的单人策略自走棋。" />
+    <title>苔原远征 · 长夜行旅</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%23132320'/%3E%3Cpath d='M32 8 52 32 32 56 12 32Z' fill='%23c7dca1'/%3E%3Cpath d='M32 20 41 32 32 44 23 32Z' fill='%23132320'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="ambient" aria-hidden="true"></div>
+    <div class="app">
+      <header>
+        <a class="brand" href="./" aria-label="苔原远征首页"
+          ><span class="brand-mark">❖</span><span>苔原远征<small>TUNDRA EXPEDITION</small></span></a
+        >
+        <div class="chapter"><i></i><span>长夜行旅</span><b>单人策略冒险</b></div>
+        <div class="header-actions">
+          <button id="sound" class="icon-button" aria-label="关闭音效" title="音效 · M">♫</button
+          ><button id="settings" class="icon-button" aria-label="声音与设置" title="声音与设置">⚙</button
+          ><button id="help" class="quiet">旅人指南 <span>↗</span></button>
         </div>
-        <div class="battle-progress"><i id="battle-progress-bar"></i></div>
-        <div class="battle-controls"><div><span id="hint"></span><small id="battle-time">布阵不计时 · 按空格出发</small></div><div class="control-buttons"><button id="auto" class="quiet" title="自动上阵并安排前后排">♧ 整队</button><button id="speed" class="quiet" title="切换战斗速度">×1</button><button id="pause" class="icon-button" aria-label="暂停战斗" title="暂停 / 继续" disabled>Ⅱ</button><button id="fight" class="primary">开始战斗 <span>→</span></button></div></div>
-        <div class="bench-header"><span>备战席 <small>RESERVES</small></span><span id="bench-count"></span></div><div id="bench" class="bench" aria-label="备战席"></div>
-        <div class="onboarding" id="onboarding"><span>✧</span><div><strong>先认识你的伙伴</strong><p>酒馆招募 → 点击伙伴，再点下方棋格上阵。也可以拖动棋子。3 个同星伙伴自动升星。</p></div><button id="dismiss-tip" aria-label="收起新手提示">×</button></div>
-      </section>
-      <aside class="panel intel">
-        <div class="intel-tabs" role="tablist" aria-label="队伍信息"><button id="tab-scout" role="tab" aria-selected="true" data-tab="scout">侦察</button><button id="tab-unit" role="tab" aria-selected="false" data-tab="unit">伙伴</button><button id="tab-log" role="tab" aria-selected="false" data-tab="log">战况</button></div>
-        <div id="scout-panel" role="tabpanel"><div class="enemy-portrait" id="enemy-portrait"></div><div class="eyebrow center" id="enemy-tag"></div><h3 id="enemy-name"></h3><p id="enemy-description"></p><div id="enemy-list"></div><div class="scout-tip" id="scout-tip"></div><button id="inspect-enemy" class="secondary full">查看敌方技能 ↗</button></div>
-        <div id="unit-panel" role="tabpanel" hidden></div>
-        <div id="log-panel" role="tabpanel" hidden><div class="section-label">战场记录 <span>LIVE LOG</span></div><div id="log" aria-live="polite"></div><button id="last-report" class="secondary full">查看上一场战报</button></div>
-      </aside>
+      </header>
+      <main>
+        <section class="heading">
+          <div>
+            <div class="eyebrow">A SMALL BAND. AN EXTRAORDINARY JOURNEY.</div>
+            <h1>万物有灵，向林而行<span>。</span></h1>
+            <p>与伙伴并肩，把每一步抉择，写成属于你的远征。</p>
+          </div>
+          <div class="journey-actions">
+            <span id="difficulty-badge" class="subtle-badge"></span
+            ><button id="restart" class="quiet">↻ 新的远征</button>
+          </div>
+        </section>
+        <nav id="route" aria-label="三章远征地图"></nav>
+        <div class="layout">
+          <aside class="panel expedition">
+            <div class="section-label">旅人的行囊 <span>EXPEDITION</span></div>
+            <div class="life">
+              <span>♥</span><strong id="life">100</strong><small>/ 100</small><span id="life-status">状态良好</span>
+            </div>
+            <div class="life-track"><i id="life-bar"></i></div>
+            <div class="resources">
+              <div>
+                <small>远征金币</small><strong class="gold">◈ <span id="gold">11</span></strong>
+              </div>
+              <div><small>上阵人口</small><strong id="population">2 / 3</strong></div>
+            </div>
+            <div class="income-line" id="income"></div>
+            <button id="expand" class="secondary full">扩充队伍 <span>◈ 4</span></button>
+            <div class="divider"></div>
+            <div class="section-label">队伍羁绊 <span>SYNERGIES</span></div>
+            <div id="synergies"></div>
+            <div class="divider"></div>
+            <div class="section-label">旅途遗物 <span id="relic-count">0</span></div>
+            <div id="relics"></div>
+            <div class="divider"></div>
+            <div class="section-label">装备行囊 <span id="bag-count"></span></div>
+            <p class="tiny muted">选择伙伴，再点击装备穿戴。</p>
+            <div id="bag" class="bag"></div>
+            <div class="save-status" id="save-status"><i></i> 进度已保存</div>
+            <button id="status-toggle" class="status-toggle" aria-expanded="false" aria-controls="synergies relics bag">
+              羁绊与行囊 ▾
+            </button>
+          </aside>
+          <section class="arena-section">
+            <div class="arena-top">
+              <div>
+                <span class="eyebrow" id="stage-label"></span>
+                <h2 id="stage-title"></h2>
+              </div>
+              <span id="phase" class="badge"></span>
+            </div>
+            <div class="stage-modifier" id="stage-modifier"></div>
+            <div class="arena" id="arena">
+              <div class="scene-vignette"></div>
+              <div class="fireflies" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              <div class="board-label top">
+                <span><i class="enemy-dot"></i>敌方阵地</span><span id="enemy-power"></span>
+              </div>
+              <div class="playfield" id="playfield">
+                <div id="board" class="board" aria-label="六列六排战场"></div>
+                <div id="actors" class="actors"></div>
+                <svg
+                  id="target-link"
+                  class="target-link"
+                  viewBox="0 0 600 600"
+                  preserveAspectRatio="none"
+                  aria-hidden="true"
+                ></svg>
+                <div id="range-legend" class="range-legend" hidden></div>
+                <svg
+                  id="effects"
+                  class="effects"
+                  viewBox="0 0 600 600"
+                  preserveAspectRatio="none"
+                  aria-hidden="true"
+                ></svg>
+                <div id="floaters" class="floaters" aria-hidden="true"></div>
+              </div>
+              <div class="board-label bottom">
+                <span><i></i>我方阵地</span><span id="formation-power"></span>
+              </div>
+              <div id="travel-surface" class="travel-surface" hidden></div>
+            </div>
+            <div class="battle-progress"><i id="battle-progress-bar"></i></div>
+            <div class="battle-controls">
+              <div><span id="hint"></span><small id="battle-time">布阵不计时 · 按空格出发</small></div>
+              <div class="control-buttons">
+                <button id="auto" class="quiet" title="自动上阵并安排前后排">♧ 整队</button
+                ><button id="speed" class="quiet" title="切换战斗速度">×1</button
+                ><button id="pause" class="icon-button" aria-label="暂停战斗" title="暂停 / 继续" disabled>Ⅱ</button
+                ><button id="fight" class="primary">开始战斗 <span>→</span></button>
+              </div>
+            </div>
+            <div class="bench-header">
+              <span>备战席 <small>RESERVES</small></span
+              ><span id="bench-count"></span>
+            </div>
+            <div id="bench" class="bench" aria-label="备战席"></div>
+            <div class="onboarding" id="onboarding">
+              <span>✧</span>
+              <div>
+                <strong>先认识你的伙伴</strong>
+                <p>酒馆招募 → 点击伙伴，再点下方棋格上阵。也可以拖动棋子。3 个同星伙伴自动升星。</p>
+              </div>
+              <button id="dismiss-tip" aria-label="收起新手提示">×</button>
+            </div>
+          </section>
+          <aside class="panel intel">
+            <div class="intel-tabs" role="tablist" aria-label="队伍信息">
+              <button id="tab-scout" role="tab" aria-selected="true" data-tab="scout">侦察</button
+              ><button id="tab-unit" role="tab" aria-selected="false" data-tab="unit">伙伴</button
+              ><button id="tab-log" role="tab" aria-selected="false" data-tab="log">战况</button>
+            </div>
+            <div id="scout-panel" role="tabpanel">
+              <div class="enemy-portrait" id="enemy-portrait"></div>
+              <div class="eyebrow center" id="enemy-tag"></div>
+              <h3 id="enemy-name"></h3>
+              <p id="enemy-description"></p>
+              <div id="enemy-list"></div>
+              <div class="scout-tip" id="scout-tip"></div>
+              <button id="inspect-enemy" class="secondary full">查看敌方技能 ↗</button>
+            </div>
+            <div id="unit-panel" role="tabpanel" hidden></div>
+            <div id="log-panel" role="tabpanel" hidden>
+              <div class="section-label">战场记录 <span>LIVE LOG</span></div>
+              <div id="log" aria-live="polite"></div>
+              <button id="last-report" class="secondary full">查看上一场战报</button>
+            </div>
+          </aside>
+        </div>
+        <section class="shop panel">
+          <div class="shop-heading">
+            <div>
+              <h2>林间酒馆 <small>THE WAYFARER'S INN</small></h2>
+              <p id="shop-tip">每一次相遇，都可能改变旅途。3 个同星伙伴自动合成。</p>
+            </div>
+            <div>
+              <button id="lock" class="quiet" title="保留这批伙伴到下一关">◇ 锁定</button
+              ><button id="refresh" class="secondary">↻ 刷新 <span>免费</span></button>
+            </div>
+          </div>
+          <div id="shop-cards"></div>
+        </section>
+        <footer>
+          <span>❧ 森林会记得，每一个勇敢的名字。</span
+          ><span id="footer-info">三章随机地图 · 27 站远征 · 伙伴战后恢复</span>
+        </footer>
+      </main>
     </div>
-    <section class="shop panel"><div class="shop-heading"><div><h2>林间酒馆 <small>THE WAYFARER'S INN</small></h2><p id="shop-tip">每一次相遇，都可能改变旅途。3 个同星伙伴自动合成。</p></div><div><button id="lock" class="quiet" title="保留这批伙伴到下一关">◇ 锁定</button><button id="refresh" class="secondary">↻ 刷新 <span>免费</span></button></div></div><div id="shop-cards"></div></section>
-    <footer><span>❧ 森林会记得，每一个勇敢的名字。</span><span id="footer-info">三章随机地图 · 27 站远征 · 伙伴战后恢复</span></footer>
-  </main>
-</div>
-<div id="toast" role="status" aria-live="polite"></div>
-<dialog id="modal" aria-labelledby="modal-title"><div id="modal-content"></div></dialog>
-<script src="world.js"></script><script src="engine.js"></script><script src="art.js"></script><script src="audio.js"></script><script src="tests/service-fixtures.js"></script><script>const qaStore={'tundra-expedition-v3':JSON.stringify(ServiceFixtures[new URLSearchParams(location.search).get('phase')||'merchant']),'tundra-preferences-v2':'{"enabled":false,"tip":false}'};Object.defineProperty(window,'localStorage',{value:{getItem:k=>qaStore[k]??null,setItem:(k,v)=>qaStore[k]=String(v)}});window.addEventListener('error',e=>document.body.dataset.qaError=e.message);</script><script src="game.js"></script>
-</body>
+    <div id="toast" role="status" aria-live="polite"></div>
+    <dialog id="modal" aria-labelledby="modal-title"><div id="modal-content"></div></dialog>
+    <script src="world.js"></script>
+    <script src="engine.js"></script>
+    <script src="art.js"></script>
+    <script src="audio.js"></script>
+    <script src="tests/service-fixtures.js"></script>
+    <script>
+      const qaStore = {
+        "tundra-expedition-v3": JSON.stringify(
+          ServiceFixtures[new URLSearchParams(location.search).get("phase") || "merchant"],
+        ),
+        "tundra-preferences-v2": '{"enabled":false,"tip":false}',
+      };
+      Object.defineProperty(window, "localStorage", {
+        value: { getItem: k => qaStore[k] ?? null, setItem: (k, v) => (qaStore[k] = String(v)) },
+      });
+      window.addEventListener("error", e => (document.body.dataset.qaError = e.message));
+    </script>
+    <script src="game.js"></script>
+  </body>
 </html>
