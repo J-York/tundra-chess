@@ -1,25 +1,25 @@
 {
-  "release": "20260908-222839-chapter-art",
-  "previous": "20260908-073703-drift-free-rules",
-  "note": "三章独立手绘场景、统一主题引用与六视口美术验收；沿用已验收的模块化界面",
-  "commit": "7d7c84da467f5c80fc5227ca50e7d8fba8408847",
+  "release": "20260909-113413-chapter-atmosphere",
+  "previous": "20260908-222839-chapter-art",
+  "note": "角色与棋盘融合、战斗反馈统一及三章旅途氛围延伸",
+  "commit": "c248a68db7ca631f9ff436bebda06375c472d81a",
   "hashes": {
     "index.html": "36d47043222dc38f5ba30efb72f12969e9ad3cfa1085b68ed0360c89ede84351",
-    "style.css": "50f6fb18a7bb5fdd8435a591c3505d1c6934367b9060aec0eb135ee1d07b0ac7",
+    "style.css": "75bfa595168f6702f399c0abcf77411ded23fd4a94f8dcffd7e7dbd18447a710",
     "world.js": "4c9d9d9af137237c6a2229229a5c8a7afae3f96a5b36afdd02fa429f9cbcc51f",
     "engine.js": "a5cc287d3098cc31f399e63bb9a6e81f709da67433eb64b43ee0b3ec7c4d853a",
-    "ui-store.js": "f8e0159a99f1b789359f6810a0c18093b8a78be97d355963f4bfffdb560b4249",
-    "ui-effects.js": "3bd24bc983292d6bcd54841bf1dc1e87a54a75ab2f897e491590632aee63b2ca",
-    "ui-map.js": "b62344d28f0b2315353d0bd14cae3dd727bb3c6dfb37e10c9a8ef3d0499ee3f5",
-    "ui-board.js": "920bafc1bcb1fed084fbfa48b1a3fe218a1f4e7ffda642dddbb982032fe0c6d8",
+    "ui-store.js": "6b1dd5e47593c5afcd05fcb04d77fcb3ae1e8b4b539e1d0cc25b085b60947a28",
+    "ui-effects.js": "256089af0e63f7df256b2c869d59d12d8766c5cb21b2fda54b71bbb1885b8ac3",
+    "ui-map.js": "82ae7e64935b5f78f81b420ea6d0bb02d83087c2fc018a549ee8eb18e42de78d",
+    "ui-board.js": "ca1f60cea15444a1e0e0231732ce0340cc27dece6c2ad04371b734a16476d164",
     "ui-battle.js": "78181258f1cc878e31a60c58f4873e41421179fddd761c065d861f0f22a79612",
-    "ui-dialogs.js": "9a9694c92b7a05c700211aa5f3e6dbddf7b4b904b3d998e10b25b23c8fc82a58",
+    "ui-dialogs.js": "965103e0850a1a82476af24d59fb5e93646824ef9057d538addbd6265ba92950",
     "game.js": "d636209df0e76e168c8a6173fb0824ee34a8d8d74d29e9c14f5fda514ec0d34c",
     "audio.js": "82de5ea124c362177d15a33568ec86c3bffd789c12a5ef04101935f8f58e6f4a",
-    "art.js": "54dab4d8bab035f30e1635c3ac0b4509adbfd08c3ce7726a608a405b4e1846c4",
+    "art.js": "9a69bcdd09b227557e3928022833afa57c0bf2d5d03930f5550149ab95b0452a",
     "assets/chapter-forest.webp": "30361481504e891db118bf63c4ea5dff4d392a0ca1d988bbf13faa6a861a9d25",
     "assets/chapter-ruin.webp": "f2757eb1dddff2931fc9106dbeced068f113e8b4b38b837b2ab971c2bf336d3f",
     "assets/chapter-moon.webp": "ba6538cb40231dc18efad60b7d6cb0ca524ffbc575863531a4348ec717e5d37f"
   },
-  "verification": "Source hashes verified by deploy.py; all 16 public files HTTP 200 and SHA-256 matched via Ego Lite. Terminal direct requests were redirected by enterprise network filtering."
+  "verification": "Source HTTP 200 and all hashes verified by deploy.py. All 16 public resources HTTPS 200 and exact SHA-256 match via Ego Lite, no HTML normalization needed. Terminal direct-fetch wait terminated after independent browser verification succeeded."
 }
