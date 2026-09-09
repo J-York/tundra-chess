@@ -221,7 +221,7 @@ async function verifyChapters({ call, evaluate, consoleErrors }) {
             const surface = document.getElementById('${kind === 'boss' ? 'scout-tip' : 'travel-surface'}');
             surface.scrollIntoView({block:'center'});
             if (surface.scrollWidth > surface.clientWidth + 1) throw Error('Surface horizontal overflow');
-            if ('${kind}' === 'merchant' && document.querySelectorAll('.merchant-offer').length !== 4) throw Error('Missing offers');
+            if ('${kind}' === 'merchant' && (state.merchant.length < 4 || document.querySelectorAll('.merchant-offer').length !== state.merchant.length)) throw Error('Missing offers: ' + document.querySelectorAll('.merchant-offer').length + ' of ' + state.merchant.length);
           }
           if (document.documentElement.scrollWidth > innerWidth) throw Error('Page horizontal overflow');
         })()`);

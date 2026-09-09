@@ -2113,6 +2113,29 @@ check('The eight new companions each target what their description promises', ()
     assert.deepEqual(run.battle, resumed.battle, type + ' must resume identically');
   }
 });
+check('Every companion has both a silhouette and its engraving, and every SVG parses', () => {
+  const source = require('node:fs').readFileSync(require.resolve('./art.js'), 'utf8');
+  const table = name => {
+    const start = source.indexOf('const ' + name + ' = {');
+    assert.ok(start > 0, 'art.js must declare ' + name);
+    return new Set([...source.slice(start, source.indexOf('\n  };', start)).matchAll(/^ {4}(\w+):/gm)].map(m => m[1]));
+  };
+  const shapes = table('ornaments'),
+    engraving = table('details');
+  for (const type of Object.keys(E.TYPES)) {
+    assert.ok(shapes.has(type), type + ' has no silhouette in art.js');
+    // A missing engraving used to render the string "undefined" into the portrait's SVG.
+    assert.ok(engraving.has(type), type + ' has no engraving detail in art.js');
+  }
+  // Tags must be balanced and every path must carry a d attribute, checked without a DOM.
+  for (const [, drawing] of source.matchAll(/^ {4}\w+:\s*(?:`([^`]*)`|'([^']*)')/gm)) {
+    const markup = drawing ?? '';
+    const opened = [...markup.matchAll(/<(\w+)[^>]*?(\/?)>/g)];
+    for (const tag of opened) assert.ok(tag[2] === '/', 'every element in art.js must be self-closing: ' + tag[1]);
+    for (const path of markup.matchAll(/<path\b([^>]*)>/g))
+      assert.ok(/\sd="[^"]+"/.test(path[1]), 'a path in art.js carries no geometry');
+  }
+});
 check('Every affix the map can roll is actually implemented by the rules', () => {
   const source = require('node:fs').readFileSync(require.resolve('./engine.js'), 'utf8');
   const body = source.slice(source.indexOf('function unitStats'), source.indexOf('const distance ='));

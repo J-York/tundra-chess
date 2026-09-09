@@ -463,15 +463,6 @@ header {
   color: #fdf6cd;
   box-shadow: 0 0 8px #b7c06a55;
 }
-.role-pill.tier-2 {
-  color: #e6eebb;
-  border-color: #7c8f56;
-}
-.role-pill.tier-3 {
-  color: #fdf6cd;
-  background: #4f6236;
-  border-color: #9aa85f;
-}
 .role-traits {
   display: flex;
   gap: 5px;
@@ -2979,6 +2970,17 @@ body.reduce-motion *:after {
 }
 .role-pill.active {
   background: #384932;
+}
+/* Role tiers sit after the later .role-pill.active rule: with equal specificity the last one
+   wins, so a tier badge placed earlier would silently lose its colour on an active pill. */
+.role-pill.tier-2 {
+  color: #e6eebb;
+  border-color: #7c8f56;
+}
+.role-pill.tier-3 {
+  color: #fdf6cd;
+  background: #4f6236;
+  border-color: #9aa85f;
 }
 .shop-heading > div:first-child {
   min-width: 0;

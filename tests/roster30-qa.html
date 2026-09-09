@@ -212,6 +212,12 @@
     </script>
     <script src="art.js"></script>
     <script src="audio.js"></script>
+    <script src="ui-store.js"></script>
+    <script src="ui-effects.js"></script>
+    <script src="ui-map.js"></script>
+    <script src="ui-board.js"></script>
+    <script src="ui-battle.js"></script>
+    <script src="ui-dialogs.js"></script>
     <script src="game.js"></script>
     <script>
       const qaView = new URLSearchParams(location.search).get("view");
@@ -221,7 +227,7 @@
       if (qaView === "art") {
         Tundra.showDialog(
           "art",
-          heading("八位新同行者", "补齐游侠、刺客与前排缺口 · 两位双阵营伙伴", "COMPANIONS / NEW ARRIVALS") +
+          Tundra.heading("八位新同行者", "补齐游侠、刺客与前排缺口 · 两位双阵营伙伴", "COMPANIONS / NEW ARRIVALS") +
             '<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px">' +
             added
               .map(
@@ -231,7 +237,7 @@
                   "<h3>" +
                   E.TYPES[t].name +
                   "</h3><small>" +
-                  factionName(t) +
+                  Tundra.factionName(t) +
                   " · " +
                   E.ROLES[E.TYPES[t].role] +
                   "</small><p>" +
@@ -241,7 +247,7 @@
               .join("") +
             "</div>",
         );
-        $("modal").style.width = "1100px";
+        document.getElementById("modal").style.width = "1100px";
       }
     </script>
   </body>

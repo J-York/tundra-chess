@@ -59,7 +59,7 @@ python3 -m http.server 8879 --bind 127.0.0.1
 
 ```sh
 npm install          # 仅安装 eslint / prettier，供本地检查使用
-npm run verify       # 语法检查 + eslint + prettier --check + 84 项规则检查
+npm run verify       # 语法检查 + eslint + prettier --check + 86 项规则检查
 npm test             # node test.cjs
 npm run balance      # node balance.cjs 30，五开局 × 三难度共 450 局
 npm run fingerprint  # 输出规则行为指纹，用于证明重构没有改变语义

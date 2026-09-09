@@ -128,6 +128,7 @@
       heal: ['#bce4aa', 'M-18 0h36M0-18v36'],
       shield: ['#aeddef', 'M0-26 22-15 18 12 0 27-18 12-22-15Z'],
       shatter: ['#f1b291', 'M-8-24-22-15-18 12-5 24M8-24 22-15 18 12 5 24M4-18-5-4 6 5-3 17'],
+      mark: ['#e7c58f', 'M0-26 7-9 25-6 12 6 15 24 0 15-15 24-12 6-25-6-7-9Z'],
     };
     const [color, path] = shapes[kind] || shapes.physical;
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -225,7 +226,7 @@
       }
       if (ev.type === 'mark') {
         floatText(ev.pos, '✦ 易伤 +' + Math.round(ev.value * 100) + '%', 'critical');
-        ring(ev.pos, '#e7c58f', 48);
+        impact(ev.pos, 'mark');
       }
       if (ev.type === 'push') {
         ring(ev.from, '#b9debb', 30);
