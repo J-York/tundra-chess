@@ -8,13 +8,21 @@
   const reducedMotion = () => prefs.reduced || matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function transient(el, frames, duration, delay = 0) {
+    const layer = el.parentElement;
+    const limit = layer.id === 'floaters' ? 32 : 64;
+    while (layer.children.length > limit) {
+      const oldest = layer.firstElementChild;
+      for (const animation of oldest.getAnimations()) animation.cancel();
+      oldest.remove();
+    }
     const anim = el.animate(frames, {
       duration: duration / (prefs.speed || 1),
       delay: delay / (prefs.speed || 1),
       easing: 'ease-out',
       fill: 'both',
     });
-    anim.onfinish = () => el.remove();
+    anim.onfinish = anim.oncancel = () => el.remove();
+    if (ui.paused) anim.pause();
     return anim;
   }
 
@@ -33,6 +41,19 @@
   function floatText(pos, label, kind = '') {
     if (reducedMotion()) return;
     const el = document.createElement('span');
+    const sameCell = [...$('floaters').children].filter(node => node.dataset.pos === String(pos));
+    if (sameCell.length >= 3) {
+      for (const animation of sameCell[0].getAnimations()) animation.cancel();
+      sameCell[0].remove();
+    }
+    const occupied = [...$('floaters').children]
+      .filter(node => node.dataset.pos === String(pos))
+      .map(node => Number(node.dataset.lane));
+    const lane = [0, 1, 2].find(value => !occupied.includes(value));
+    el.dataset.lane = lane;
+    el.dataset.pos = pos;
+    el.style.marginLeft = (lane - 1) * 12 + 'px';
+    el.style.marginTop = -lane * 15 + 'px';
     el.className = 'floater ' + kind;
     el.textContent = label;
     el.style.left = (((pos % 6) + 0.5) * 100) / 6 + '%';
@@ -77,24 +98,44 @@
       svg = 'http://www.w3.org/2000/svg',
       el = document.createElementNS(svg, 'line');
     const mage = E.TYPES[type]?.role === 'mage' || type === 'oracle',
-      color = mage ? '#d0dbff' : '#e3ddb0';
+      color = mage ? E.TYPES[type].color : '#e3ddb0';
     el.setAttribute('x1', a.x);
     el.setAttribute('y1', a.y);
     el.setAttribute('x2', a.x + (b.x - a.x) * 0.16);
     el.setAttribute('y2', a.y + (b.y - a.y) * 0.16);
     el.setAttribute('stroke', color);
     el.setAttribute('stroke-width', mage ? '5' : '2');
-    el.classList.add('projectile');
+    el.classList.add('projectile', mage ? 'arcane' : 'arrow');
     $('effects').append(el);
     transient(
       el,
       [
         { transform: 'translate(0,0)', opacity: 1 },
-        { transform: `translate(${b.x - a.x}px,${b.y - a.y}px)`, opacity: 0 },
+        { transform: `translate(${b.x - a.x}px,${b.y - a.y}px)`, opacity: 0.7 },
       ],
       230,
       delay,
     );
+  }
+
+  function impact(pos, kind) {
+    if (reducedMotion()) return;
+    const p = effectPos(pos);
+    const shapes = {
+      physical: ['#f0d5a1', 'M-22 16 20-18M-12 22 25-10'],
+      magic: ['#d8c5fa', 'M0-25 18 0 0 25-18 0ZM-28 0h8m40 0h8'],
+      true: ['#f7efdc', 'M-22 0h44M0-22v44'],
+      heal: ['#bce4aa', 'M-18 0h36M0-18v36'],
+      shield: ['#aeddef', 'M0-26 22-15 18 12 0 27-18 12-22-15Z'],
+      shatter: ['#f1b291', 'M-8-24-22-15-18 12-5 24M8-24 22-15 18 12 5 24M4-18-5-4 6 5-3 17'],
+    };
+    const [color, path] = shapes[kind] || shapes.physical;
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('transform', `translate(${p.x},${p.y})`);
+    g.classList.add('impact', 'impact-' + kind);
+    g.innerHTML = `<path d="${path}" fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>`;
+    $('effects').append(g);
+    transient(g, [{ opacity: 0.95 }, { opacity: 0 }], kind === 'shield' ? 650 : 380);
   }
 
   function spellMark(pos, type) {
@@ -145,8 +186,13 @@
       }
       if (ev.type === 'damage') {
         if (ev.value)
-          floatText(ev.pos, (ev.critical ? '✦ ' : '') + '−' + Math.round(ev.value), ev.critical ? 'critical' : '');
-        else if (ev.absorbed) floatText(ev.pos, '⬡ ' + Math.round(ev.absorbed), 'shield');
+          floatText(
+            ev.pos,
+            (ev.critical ? '✦ ' : '') + '−' + Math.round(ev.value),
+            ev.critical ? 'critical' : ev.kind || 'physical',
+          );
+        if (ev.absorbed) floatText(ev.pos, '盾 −' + Math.round(ev.absorbed), 'shield');
+        if (ev.value || ev.absorbed) impact(ev.pos, ev.value ? ev.kind || 'physical' : 'shield');
         if (actor) {
           actor.classList.remove('hurt');
           void actor.offsetWidth;
@@ -155,16 +201,16 @@
       }
       if (ev.type === 'heal' && ev.value >= 5) {
         floatText(ev.pos, '+' + Math.round(ev.value), 'heal');
-        if (ev.value >= 20) ring(ev.pos, '#b5dfa3', 32);
+        impact(ev.pos, 'heal');
       }
       if (ev.type === 'shield') {
-        floatText(ev.pos, '⬡ +' + ev.value, 'shield');
-        ring(ev.pos, '#a7d7e8', 45);
+        floatText(ev.pos, '盾 +' + Math.round(ev.value), 'shield');
+        impact(ev.pos, 'shield');
       }
       if (ev.type === 'shatter') {
         floatText(ev.pos, ev.value ? '破盾 −' + ev.value : '裂界', 'critical');
         projectile(ev.from, ev.pos, 'breaker');
-        ring(ev.pos, '#edc297', 55);
+        impact(ev.pos, 'shatter');
       }
       if (ev.type === 'push') {
         ring(ev.from, '#b9debb', 30);

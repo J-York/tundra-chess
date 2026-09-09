@@ -2,12 +2,57 @@
 (function (T) {
   'use strict';
 
+  // Chapter flavor stays here; world.js remains the source of travel rules.
+  const atmosphere = [
+    {
+      mark: '❧',
+      road: '循着苔痕，走向林深处',
+      camp: '树根间的篝火',
+      merchant: '林间铃声',
+      treasure: '苔藓覆盖的旧箱',
+      campText: '雨水停在叶尖。伙伴围着火光坐下，湿木的香气慢慢散开。',
+      merchantText: '铜铃从枝叶后传来。游商掀开油布，把一路收来的物件摆在树桩上。',
+      eventText: '林间小径忽然安静下来，只有叶下的水滴还在落。',
+      treasureText: '藤蔓让出一道缝隙，旧箱的封蜡在苔色里泛着微光。',
+      boss: '树冠遮住了最后一束光。脚下的根须，正缓缓苏醒。',
+    },
+    {
+      mark: '✧',
+      road: '沿着碎星，穿过旧回廊',
+      camp: '断柱下的余温',
+      merchant: '拱门下的灯盏',
+      treasure: '星尘掩映的石匣',
+      campText: '风穿过残缺的拱门。小小的火焰映在石壁上，像一颗尚未熄灭的星。',
+      merchantText: '游商把灯挂在断柱上。旧金属与水晶排成一列，远处传来泉水的回声。',
+      eventText: '石阶尽头，一段被遗忘的往事正等待回应。',
+      treasureText: '石匣藏在倾倒的碑后，封蜡上覆着一层细碎星尘。',
+      boss: '泉水倒映着无人见过的星图。议会的低语，在每一道拱门间回响。',
+    },
+    {
+      mark: '☽',
+      road: '穿过长夜，寻找黎明',
+      camp: '背风处的微火',
+      merchant: '夜路上的孤灯',
+      treasure: '霜封的旅人遗箱',
+      campText: '月色停在营地之外。大家靠近最后一点火光，听见彼此安稳的呼吸。',
+      merchantText: '一盏孤灯守在夜路旁。游商没有催促，只把还温着的行囊推近了一些。',
+      eventText: '夜风压低了声音。下一步，仍要由你们一起决定。',
+      treasureText: '薄霜覆住了箱盖。拂开霜痕，封蜡仍完好如初。',
+      boss: '所有脚步声都停了。长夜的尽头，守望者缓缓转过身来。',
+    },
+  ];
+
+  function chapterAtmosphere(act) {
+    return atmosphere[act];
+  }
+
   function renderRoute() {
     const node = E.currentNode(state),
       chapter = E.CHAPTERS[node.act];
+    document.body.dataset.chapter = chapter.theme;
     T.paint(
       'route',
-      `<button id="open-map" class="route-map-button" title="查看三章路线与首领">⌘ 远征地图 <span>第 ${node.act + 1} 章 · ${chapter.name}</span></button><div class="journey-progress">${Array.from({ length: 9 }, (_, i) => `<span class="journey-step ${i === node.floor ? 'active' : i < node.floor ? 'done' : ''}" title="本章第 ${i + 1} 个节点">${i < node.floor ? '✓' : i === 8 ? '❖' : i + 1}</span>`).join('')}</div><button class="journey-seed" id="share-run" title="分享或重玩相同远征">种子 ${state.seed} ↗</button>`,
+      `<button id="open-map" class="route-map-button" title="查看三章路线与首领">${T.icon('map')} 远征地图 <span>第 ${node.act + 1} 章 · ${chapter.name}</span></button><div class="journey-progress">${Array.from({ length: 9 }, (_, i) => `<span class="journey-step ${i === node.floor ? 'active' : i < node.floor ? 'done' : ''}" title="本章第 ${i + 1} 个节点">${i < node.floor ? '✓' : i === 8 ? '❖' : i + 1}</span>`).join('')}</div><button class="journey-seed" id="share-run" title="分享或重玩相同远征">种子 ${state.seed} ↗</button>`,
     );
   }
 
@@ -40,7 +85,7 @@
           ),
       )
       .join('');
-    return `<div class="map-scroll ${large ? 'large' : ''}"><div class="map-canvas"><svg class="map-lines" viewBox="0 0 704 212" aria-hidden="true">${edges}</svg>${nodes.map(n => `<button class="map-node kind-${n.kind} ${state.completed.includes(n.id) ? 'visited' : ''} ${n.id === state.nodeId ? 'current' : ''} ${available.includes(n.id) ? 'available' : ''} ${selected.id === n.id ? 'selected' : ''}" style="left:${(x(n) / 704) * 100}%;top:${(y(n) / 212) * 100}%" data-map-node="${n.id}" aria-label="第 ${n.floor + 1} 层 ${E.NODES[n.kind].name} ${n.kind === 'event' ? '' : n.name}${available.includes(n.id) ? '，可前往' : ''}${state.completed.includes(n.id) ? '，已完成' : ''}" aria-pressed="${selected.id === n.id}"><b>${state.completed.includes(n.id) ? '✓' : E.NODES[n.kind].icon}</b><small>${E.NODES[n.kind].name}</small></button>`).join('')}</div></div>`;
+    return `<div data-chapter="${E.CHAPTERS[act].theme}" class="map-scroll ${large ? 'large' : ''}"><div class="map-canvas"><svg class="map-lines" viewBox="0 0 704 212" aria-hidden="true">${edges}</svg>${nodes.map(n => `<button class="map-node kind-${n.kind} ${state.completed.includes(n.id) ? 'visited' : ''} ${n.id === state.nodeId ? 'current' : ''} ${available.includes(n.id) ? 'available' : ''} ${selected.id === n.id ? 'selected' : ''}" style="left:${(x(n) / 704) * 100}%;top:${(y(n) / 212) * 100}%" data-map-node="${n.id}" aria-label="第 ${n.floor + 1} 层 ${E.NODES[n.kind].name} ${n.kind === 'event' ? '' : n.name}${available.includes(n.id) ? '，可前往' : ''}${state.completed.includes(n.id) ? '，已完成' : ''}" aria-pressed="${selected.id === n.id}"><b>${state.completed.includes(n.id) ? '✓' : E.NODES[n.kind].icon}</b><small>${E.NODES[n.kind].name}</small></button>`).join('')}</div></div>`;
   }
 
   function chapterTabs(act) {
@@ -52,27 +97,32 @@
       travel = ['map', 'camp', 'merchant', 'event', 'treasure', 'node-result'].includes(state.phase);
     $('arena').classList.toggle('travel-mode', travel);
     $('travel-surface').hidden = !travel;
+    $('travel-surface').dataset.stop = state.phase;
     if (!travel) return;
+    const mood = atmosphere[node.act];
+    const flavor = text => `<p class="chapter-flavor"><span aria-hidden="true">${mood.mark}</span>${text}</p>`;
     const title = (label, subtitle) =>
       `<div class="travel-heading"><span class="eyebrow">${E.CHAPTERS[node.act].name} · 第 ${node.floor + 1} 站</span><h3>${label}</h3><p>${subtitle}</p></div>`;
     if (state.phase === 'map') {
       T.paint(
         'travel-surface',
-        `<div class="map-title"><strong>选择下一段旅途</strong><button class="quiet" id="open-map-large">展开地图 ↗</button></div>${mapHTML(node.act)}<p class="map-footnote">亮边节点可前往 · 点击查看，右下角确认 · 首领：${E.CHAPTERS[node.act].boss.name}</p>`,
+        `<div class="map-title"><strong>${mood.road}</strong><button class="quiet" id="open-map-large">展开地图 ↗</button></div>${mapHTML(node.act)}<p class="map-footnote">亮边节点可前往 · 点击查看，右下角确认 · 首领：${E.CHAPTERS[node.act].boss.name}</p>`,
       );
     } else if (state.phase === 'camp') {
       T.paint(
         'travel-surface',
-        title('篝火旁的片刻', '只能选择一项。伙伴生命已恢复；此处补充的是远征生命。') +
+        flavor(mood.campText) +
+          title(mood.camp, '只能选择一项。伙伴生命已恢复；此处补充的是远征生命。') +
           `<div class="travel-choices"><button class="travel-choice" data-camp="heal"><b>♨ 休息</b><span>恢复 ${Math.min(26, 100 - state.life)} / 26 远征生命</span></button><button class="travel-choice" id="camp-forge" ${!E.campOptions(state).length ? 'disabled' : ''}><b>⚒ 精制装备</b><span>一件装备的加成提升 60%</span></button><button class="travel-choice" data-camp="supplies"><b>◈ 搜集物资</b><span>获得 5 金币，放弃休息与精制</span></button></div>`,
       );
     } else if (state.phase === 'merchant') {
       T.paint(
         'travel-surface',
-        title(
-          '游商的行囊',
-          `现有 ${state.gold} 金币。标记的商品可补足队伍搭配；可以买多件，也可以不买，商品不会刷新。`,
-        ) +
+        flavor(mood.merchantText) +
+          title(
+            mood.merchant,
+            `现有 ${state.gold} 金币。标记的商品可补足队伍搭配；可以买多件，也可以不买，商品不会刷新。`,
+          ) +
           `<div class="merchant-grid">${state.merchant
             .map(o => {
               const d = lootDescription(o.key);
@@ -84,7 +134,8 @@
       const ev = E.EVENTS[node.event];
       T.paint(
         'travel-surface',
-        title(ev.icon + ' ' + ev.name, ev.text) +
+        flavor(mood.eventText) +
+          title(ev.icon + ' ' + ev.name, ev.text) +
           `<div class="travel-choices">${E.eventOptions(state)
             .map(
               o =>
@@ -95,7 +146,8 @@
     } else if (state.phase === 'treasure') {
       T.paint(
         'travel-surface',
-        title('苔藓覆盖的旧箱', '封蜡还完好。你可以取出珍藏，也可以只带走箱边的金币。') +
+        flavor(mood.treasureText) +
+          title(mood.treasure, '你可以取出珍藏，也可以只带走箱边的金币。') +
           `<div class="travel-choices"><button class="travel-choice" data-treasure="open"><b>▣ 打开珍藏</b><span>55% 随机遗物，45% 随机装备</span></button><button class="travel-choice" data-treasure="gold"><b>◈ 稳妥收获</b><span>固定获得 7 金币</span></button></div>`,
       );
     } else
@@ -121,8 +173,9 @@
       reachable = E.availableNodes(state).some(n => n.id === node.id);
     T.showDialog(
       'map',
-      `${T.heading('走向下一片森林', '先看路线与首领，再决定这一站冒多大的风险。', 'THE EXPEDITION MAP')}${chapterTabs(act)}<p class="map-boss-note">❖ 本章首领 · ${E.CHAPTERS[act].boss.name}：${E.CHAPTERS[act].boss.tip}</p>${mapHTML(act, true)}<div class="map-preview"><strong>${E.NODES[node.kind].icon} ${node.kind === 'event' ? '未知事件' : node.name}</strong><p>${nodeSummary(node)}</p></div><div class="map-legend">⚔ 遭遇 · ♜ 精英 · ♨ 营地 · ◈ 商人 · ? 事件 · ▣ 宝箱 · ❖ 首领</div><div class="modal-actions"><button class="quiet" data-close>回到旅途</button>${state.phase === 'map' ? `<button class="primary" id="confirm-map-node" ${!reachable ? 'disabled' : ''}>${reachable ? '前往选中节点 →' : '请选择相连的亮边节点'}</button>` : '<span class="tiny muted">完成当前节点后，才能前往下一站。</span>'}</div>`,
+      `${T.heading(atmosphere[act].road, E.CHAPTERS[act].subtitle, `CHAPTER ${act + 1} · ${E.CHAPTERS[act].name}`)}${chapterTabs(act)}<p class="map-boss-note">❖ 本章首领 · ${E.CHAPTERS[act].boss.name}：${E.CHAPTERS[act].boss.tip}</p>${mapHTML(act, true)}<div class="map-preview"><strong>${E.NODES[node.kind].icon} ${node.kind === 'event' ? '未知事件' : node.name}</strong><p>${nodeSummary(node)}</p></div><div class="map-legend">⚔ 遭遇 · ♜ 精英 · ♨ 营地 · ◈ 商人 · ? 事件 · ▣ 宝箱 · ❖ 首领</div><div class="modal-actions"><button class="quiet" data-close>回到旅途</button>${state.phase === 'map' ? `<button class="primary" id="confirm-map-node" ${!reachable ? 'disabled' : ''}>${reachable ? '前往选中节点 →' : '请选择相连的亮边节点'}</button>` : '<span class="tiny muted">完成当前节点后，才能前往下一站。</span>'}</div>`,
     );
+    $('modal').dataset.chapter = E.CHAPTERS[act].theme;
   }
 
   function enterSelectedNode() {
@@ -154,6 +207,7 @@
   }
 
   // Surface other modules call. Trimmed to what is actually used across files.
+  T.chapterAtmosphere = chapterAtmosphere;
   T.renderRoute = renderRoute;
   T.selectedMapNode = selectedMapNode;
   T.nodeSummary = nodeSummary;

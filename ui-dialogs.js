@@ -6,6 +6,7 @@
     T.pauseForDialog();
     ui.dialogKind = kind;
     $('modal').dataset.kind = kind;
+    $('modal').dataset.chapter = E.CHAPTERS[E.currentNode(state).act].theme;
     T.paint('modal-content', html);
     if (!$('modal').open) $('modal').showModal();
     $('modal-content').querySelector('button:not(:disabled)')?.focus({ preventScroll: true });

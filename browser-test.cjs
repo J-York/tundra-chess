@@ -185,6 +185,109 @@ const DRAG = `((fromSelector, toSelector) => {
   return 'ok';
 })`;
 
+async function verifyChapters({ call, evaluate, consoleErrors }) {
+  fs.mkdirSync(artDirectory, { recursive: true });
+  for (const [width, height] of [
+    [1366, 900],
+    [390, 844],
+  ]) {
+    await call('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: width < 600 });
+    for (let act = 0; act < 3; act++) {
+      for (const kind of ['camp', 'merchant', 'event', 'treasure', 'boss', 'map']) {
+        await evaluate(`(() => {
+          document.getElementById('modal').close();
+          ui.dialogKind = null;
+          ui.mapSelected = null;
+          state = E.newRun({seed:4242});
+          const target = state.map.find(n => n.act === ${act} && n.kind === '${kind === 'map' ? 'boss' : kind}');
+          if (!target) throw Error('Missing chapter fixture');
+          state.nodeId = state.map.find(n => n.next.includes(target.id)).id;
+          state.phase = 'map';
+          const entered = E.enterNode(state, target.id);
+          if (entered.error) throw Error(entered.error);
+          Tundra.render();
+          if ('${kind}' === 'map') {
+            Tundra.showMap(${act});
+            if (document.getElementById('modal').dataset.chapter !== E.CHAPTERS[${act}].theme) throw Error('Wrong preview theme');
+            // Preview a different chapter while the active journey stays put.
+            Tundra.showMap((${act} + 1) % 3);
+            if (document.getElementById('modal').dataset.chapter !== E.CHAPTERS[(${act} + 1) % 3].theme) throw Error('Stale preview theme');
+            Tundra.showMap(${act});
+            if ([...document.querySelectorAll('.map-node.kind-event')].some(n => Object.values(E.EVENTS).some(e => n.getAttribute('aria-label').includes(e.name)))) throw Error('Unknown event leaked');
+          } else {
+            const surface = document.getElementById('${kind === 'boss' ? 'scout-tip' : 'travel-surface'}');
+            surface.scrollIntoView({block:'center'});
+            if (surface.scrollWidth > surface.clientWidth + 1) throw Error('Surface horizontal overflow');
+            if ('${kind}' === 'merchant' && document.querySelectorAll('.merchant-offer').length !== 4) throw Error('Missing offers');
+          }
+          if (document.documentElement.scrollWidth > innerWidth) throw Error('Page horizontal overflow');
+        })()`);
+        await sleep(130);
+        const shot = await call('Page.captureScreenshot', { format: 'png' });
+        fs.writeFileSync(
+          path.join(artDirectory, `chapter-${act + 1}-${kind}-${width}.png`),
+          Buffer.from(shot.data, 'base64'),
+        );
+      }
+      console.log(`chapter ${act + 1}: six surfaces at ${width}px, cross-chapter preview and hidden events verified`);
+    }
+  }
+  if (consoleErrors.length) throw Error(consoleErrors.join(' | '));
+}
+
+async function verifyFeedback({ call, evaluate }) {
+  fs.mkdirSync(artDirectory, { recursive: true });
+  await call('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
+  await call('Emulation.setDeviceMetricsOverride', { width: 1366, height: 900, deviceScaleFactor: 1, mobile: false });
+
+  await evaluate(`(() => {
+        document.getElementById('art-gallery')?.remove();
+        state = E.newRun({seed:4242});
+        state.units.push(E.unit(state, 'mage', 28));
+        E.createBattle(state);
+        prefs.reduced = false;
+        document.body.classList.remove('reduce-motion');
+        ui.paused = true;
+        Tundra.render();
+        const units = state.battle.units;
+        const samples = [
+          {type:'damage',kind:'physical',value:14,absorbed:6,critical:true},
+          {type:'damage',kind:'magic',value:23},
+          {type:'heal',value:20},
+          {type:'shield',value:30},
+          {type:'shatter',value:15,from:units[0].pos},
+        ];
+        Tundra.animateEvents(samples.map((event,i)=>({...event,id:units[i].id,pos:units[i].pos})));
+        const text = document.getElementById('floaters').textContent;
+        if (!text.includes('盾 −6') || !text.includes('−14')) throw Error('Partial absorption missing: ' + text + '; reduced=' + matchMedia('(prefers-reduced-motion: reduce)').matches);
+        if (document.querySelectorAll('.impact').length !== 5) throw Error('Expected five distinct feedback marks');
+        if (document.getElementById('effects').getAnimations({subtree:true}).some(a=>a.playState!=='paused')) throw Error('New effects must respect pause');
+      })()`);
+  const feedback = await call('Page.captureScreenshot', { format: 'png' });
+  fs.writeFileSync(path.join(artDirectory, 'feedback-1366.png'), Buffer.from(feedback.data, 'base64'));
+  await call('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+  await evaluate("document.getElementById('arena').scrollIntoView({block:'center'})");
+  const mobileFeedback = await call('Page.captureScreenshot', { format: 'png' });
+  fs.writeFileSync(path.join(artDirectory, 'feedback-390.png'), Buffer.from(mobileFeedback.data, 'base64'));
+  await evaluate(`(() => {
+        const unit = state.battle.units[0];
+        Tundra.animateEvents(Array.from({length:90},()=>({type:'damage',kind:'physical',value:1,id:unit.id,pos:unit.pos})));
+        if ([...document.querySelectorAll('#floaters > *')].filter(el=>el.dataset.pos===String(unit.pos)).length>3) throw Error('Too many labels in one cell');
+        if (document.getElementById('effects').children.length>64) throw Error('Too many effects');
+        prefs.reduced = true;
+        Tundra.syncVisuals();
+        Tundra.animateEvents([{type:'heal',value:20,pos:unit.pos,id:unit.id}]);
+        if(document.querySelectorAll('#effects > *,#floaters > *').length) throw Error('Reduced motion must clear and suppress transient feedback');
+      })()`);
+  await call('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+  await evaluate(`(() => {
+    prefs.reduced = false;
+    Tundra.animateEvents([{type:'shield',value:30,pos:18}]);
+    if(document.querySelectorAll('#effects > *,#floaters > *').length) throw Error('System reduced motion must suppress feedback');
+  })()`);
+  console.log('feedback: partial shield, shape distinction, pause, density, app and system reduced motion verified');
+}
+
 async function main() {
   const chromeProfile = fs.mkdtempSync(path.join(os.tmpdir(), 'tundra-browser-'));
   const server = spawn('python3', ['-m', 'http.server', String(PORT), '--bind', '127.0.0.1'], {
@@ -198,6 +301,9 @@ async function main() {
       `--remote-debugging-port=${DEBUG_PORT}`,
       '--no-sandbox',
       '--disable-gpu',
+      // Visual QA may open another tab; background throttling must not stall the test clock.
+      '--disable-background-timer-throttling',
+      '--disable-renderer-backgrounding',
       // Without this the renderer dies on small /dev/shm, which looks like a page hang.
       '--disable-dev-shm-usage',
       `--user-data-dir=${chromeProfile}`,
@@ -235,6 +341,18 @@ async function main() {
     await waitFor('the page to boot', () =>
       evaluate("document.readyState === 'complete' && typeof state === 'object'"),
     );
+
+    if (process.argv.includes('--chapter-only')) {
+      if (!artDirectory) throw Error('--chapter-only requires --art-dir');
+      await verifyChapters(session);
+      return;
+    }
+
+    if (process.argv.includes('--feedback-only')) {
+      if (!artDirectory) throw Error('--feedback-only requires --art-dir');
+      await verifyFeedback(session);
+      return;
+    }
 
     // A fresh, seeded expedition through the real dialog, with motion off so the DOM settles.
     await evaluate(`(() => {
@@ -483,6 +601,8 @@ async function main() {
         for (let act = 0; act < 3; act++) {
           const scene = await evaluate(`(async () => {
             state = E.newRun({seed: 4242});
+            state.units.push(E.unit(state, 'mage', 28));
+            ui.selected = state.units[0].id;
             const node = state.map.find(n => n.act === ${act} && n.kind === 'battle');
             state.nodeId = node.id;
             state.stage = node.act * 9 + node.floor;
@@ -510,6 +630,46 @@ async function main() {
           console.log(`art: ${scene.theme} ${width}×${height}, loaded, no overflow`);
         }
       }
+    }
+
+    if (artDirectory) {
+      await call('Emulation.setDeviceMetricsOverride', {
+        width: 1366,
+        height: 900,
+        deviceScaleFactor: 1,
+        mobile: false,
+      });
+      await evaluate(`(() => {
+        const gallery = document.createElement('section');
+        gallery.id = 'art-gallery';
+        gallery.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#142421;padding:28px;display:grid;grid-template-columns:repeat(8,1fr);gap:16px;overflow:auto';
+        for (const type of Object.keys(E.TYPES)) {
+          const svg = UnitArt(type);
+          const parsed = new DOMParser().parseFromString(svg, 'image/svg+xml');
+          if (parsed.querySelector('parsererror')) throw Error('Invalid portrait: ' + type);
+          const card = document.createElement('div');
+          card.style.cssText = 'text-align:center;border:1px solid #40584d;border-radius:12px;background:linear-gradient(#263d35,#182b28);padding:12px';
+          card.innerHTML = svg + '<div>' + E.TYPES[type].name + '</div>';
+          card.firstElementChild.style.cssText = 'width:100%;height:180px';
+          gallery.append(card);
+        }
+        document.body.append(gallery);
+        const ids = [...document.querySelectorAll('svg [id]')].map(el => el.id);
+        if (new Set(ids).size !== ids.length) throw Error('Duplicate SVG IDs');
+        for (const el of gallery.querySelectorAll('[fill]')) {
+          const fill = el.getAttribute('fill');
+          if (fill.startsWith('url(#') && !document.getElementById(fill.slice(5, -1))) throw Error('Unresolved paint: ' + fill);
+        }
+        scrollTo(0,0);
+      })()`);
+      const galleryShot = await call('Page.captureScreenshot', { format: 'png' });
+      fs.writeFileSync(path.join(artDirectory, 'roster-1366.png'), Buffer.from(galleryShot.data, 'base64'));
+      console.log('art: entire roster SVGs parsed, paint references resolved, IDs unique');
+    }
+
+    if (artDirectory) {
+      await verifyFeedback(session);
+      await verifyChapters(session);
     }
 
     const errors = session.consoleErrors;

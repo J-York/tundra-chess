@@ -63,6 +63,21 @@ const Tundra = {};
 (function (T) {
   'use strict';
 
+  const icons = {
+    info: 'M12 11v6M12 7h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0',
+    map: 'M3 5l6-2 6 2 6-2v16l-6 2-6-2-6 2ZM9 3v16M15 5v16',
+    sound: 'M3 9h4l5-5v16l-5-5H3ZM16 8a6 6 0 0 1 0 8M19 5a10 10 0 0 1 0 14',
+    mute: 'M3 9h4l5-5v16l-5-5H3ZM16 9l6 6M22 9l-6 6',
+    settings: 'M9 3h6l1 4 4 1v8l-4 1-1 4H9l-1-4-4-1V8l4-1ZM15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0',
+    shield: 'M12 3 21 7l-2 9-7 5-7-5-2-9Z',
+    attack: 'M5 19 19 5V3h-2L5 15M3 13l8 8M4 20l2-2',
+    health: 'M12 20 4 12C-2 4 8 0 12 7 16 0 26 4 20 12Z',
+    coin: 'M12 2 22 12 12 22 2 12ZM12 7l5 5-5 5-5-5Z',
+  };
+  function icon(name) {
+    return `<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="${icons[name] || icons.info}"/></svg>`;
+  }
+
   // Rewriting a container throws away its DOM, and with it any focus, scroll position or
   // in-progress selection inside. Two thirds of the rewrites during play produce exactly the
   // markup already on screen, so remember what each container last received and skip those.
@@ -173,6 +188,7 @@ const Tundra = {};
   }
 
   // Surface other modules call. Trimmed to what is actually used across files.
+  T.icon = icon;
   T.paint = paint;
   T.text = text;
   T.save = save;

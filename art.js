@@ -3,11 +3,11 @@
   'use strict';
   let serial = 0;
   const ornaments = {
-    guard: `<path d="M30 44 20 65 30 78 55 77 61 60 54 43Z" fill="url(#BODY)"/><path d="m24 54-13 9 5 21 14-4m27-27 15 9-2 14-14-1" fill="#73877a"/><path d="m29 76-5 19 14 2 5-18m3 0 4 18 14-2-7-21" fill="#536b60"/><path d="m27 23 13-9 17 7 3 24-16 11-19-13Z" fill="#a0af8d"/><path d="m29 34 11 2 14-4-1 11-13 6-11-7Z" fill="#344f44"/><path d="M33 37h5m7-1h5" stroke="#e0eba6" stroke-width="3"/><path d="m27 27-5-7 9 1 1-9 8 8 8-12 4 12 11-3-5 12" fill="#8ca873"/><path d="m13 56 15-5 16 9-1 25-16 12-16-17Z" fill="#486655" stroke="#b1c79a" stroke-width="2"/><path d="m27 61-5 10 5 13 6-13Z" fill="#c4d7a4"/><path d="M64 52v37m-6-28h13" stroke="#6c5440" stroke-width="5"/><path d="m60 44 10-4 8 11-5 11-16-3Z" fill="#a4ad90"/>`,
-    ranger: `<path d="m32 40-15 43 25-6 18 10-7-47Z" fill="#3c6452"/><path d="m30 49 5 29 19-2-3-28Z" fill="url(#BODY)"/><path d="m35 75-4 19 9 1 5-17 7 17 9-3-8-18" fill="#4a5548"/><path d="M28 39Q23 11 43 13 60 14 59 40L46 47Z" fill="#90a976"/><path d="m34 29 18 0-1 15-8 7-10-9Z" fill="#e0c5a0"/><path d="m26 29 18-15 13 17-16-6Z" fill="#62835c"/><path d="m40 34 2 0m6 0 2 0" stroke="#3c4738" stroke-width="2"/><path d="m25 49-6 15 21 0m12-14 15 11" fill="none" stroke="#c3bc91" stroke-width="8"/><path d="M66 27Q88 55 65 87L69 29" fill="none" stroke="#d2b47a" stroke-width="3"/><path d="M41 61h41m-5-4 5 4-5 4" stroke="#e8dfb5" stroke-width="2" fill="none"/><path d="m23 29-5-14 10 9" fill="#c3d3a3"/>`,
+    guard: `<path d="M30 44Q42 38 54 43L61 60 55 77Q42 83 30 78L20 65Z" fill="url(#BODY)"/><path d="m24 54-13 9 5 21 14-4m27-27 15 9-2 14-14-1" fill="#73877a"/><path d="m29 76-5 19 14 2 5-18m3 0 4 18 14-2-7-21" fill="#536b60"/><path d="m27 23 13-9 17 7 3 24-16 11-19-13Z" fill="#a0af8d"/><path d="m29 34 11 2 14-4-1 11-13 6-11-7Z" fill="#344f44"/><path d="M33 37h5m7-1h5" stroke="#e0eba6" stroke-width="3"/><path d="m27 27-5-7 9 1 1-9 8 8 8-12 4 12 11-3-5 12" fill="#8ca873"/><path d="m13 56 15-5 16 9-1 25-16 12-16-17Z" fill="#486655" stroke="#b1c79a" stroke-width="2"/><path d="m27 61-5 10 5 13 6-13Z" fill="#c4d7a4"/><path d="M64 52v37m-6-28h13" stroke="#6c5440" stroke-width="5"/><path d="m60 44 10-4 8 11-5 11-16-3Z" fill="#a4ad90"/>`,
+    ranger: `<path d="M32 40Q22 53 17 83L32 79 42 77Q51 85 60 87L53 40Z" fill="#3c6452"/><path d="m30 49 5 29 19-2-3-28Z" fill="url(#BODY)"/><path d="m35 75-4 19 9 1 5-17 7 17 9-3-8-18" fill="#4a5548"/><path d="M28 39Q23 11 43 13 60 14 59 40L46 47Z" fill="#90a976"/><path d="m34 29 18 0-1 15-8 7-10-9Z" fill="#e0c5a0"/><path d="m26 29 18-15 13 17-16-6Z" fill="#62835c"/><path d="m40 34 2 0m6 0 2 0" stroke="#3c4738" stroke-width="2"/><path d="m25 49-6 15 21 0m12-14 15 11" fill="none" stroke="#c3bc91" stroke-width="8"/><path d="M66 27Q88 55 65 87L69 29" fill="none" stroke="#d2b47a" stroke-width="3"/><path d="M41 61h41m-5-4 5 4-5 4" stroke="#e8dfb5" stroke-width="2" fill="none"/><path d="m23 29-5-14 10 9" fill="#c3d3a3"/>`,
     healer: `<path d="m28 47-9 36 22 6 23-8-10-35Z" fill="url(#BODY)"/><path d="m27 79 3 16 10-1 2-12 4 13 11-1-1-15" fill="#706353"/><path d="M25 27h33v26L42 59 26 48Z" fill="#eed6b4"/><path d="m34 40 2 0m10 0h2" stroke="#574435" stroke-width="2"/><path d="M14 32Q9 2 42 6 74 8 70 34Z" fill="#be8574"/><path d="M14 32q25 10 56 2" fill="none" stroke="#e3bea0" stroke-width="5"/><ellipse cx="31" cy="19" rx="6" ry="4" fill="#ebd9b4"/><ellipse cx="52" cy="15" rx="4" ry="3" fill="#ebd9b4"/><path d="m25 55-7 14 12 5m23-20 13 13" fill="none" stroke="#c6a786" stroke-width="8"/><path d="m55 66 20-2 2 23-24 2Z" fill="#617f70" stroke="#c6d3af" stroke-width="1.5"/><path d="M59 57h10v10H59Z" fill="#cfbd92"/><path d="m60 76 10 0m-5-5v10" stroke="#e0ecc2" stroke-width="3"/><path d="m32 60 19 0-2 13-13 0Z" fill="#8d9477"/>`,
     knight: `<path d="m29 36-13 49 22-5 26 9-7-50Z" fill="#8c7164"/><path d="m27 44 15-6 18 8-7 33-24-1Z" fill="url(#BODY)"/><path d="m32 75-5 20 12 1 6-17 4 18 12-2-8-21" fill="#899589"/><path d="m28 23 13-12 17 11-1 25-15 7-15-13Z" fill="#c3c6ad"/><path d="m30 30 24 0-4 10-17 0Z" fill="#3c534a"/><path d="M40 17v31m-10-4 23 0" stroke="#d9be7f" stroke-width="3"/><path d="m25 44-10 9 7 16 11-10m22-14 15 12-7 9-11-10" fill="#d3d5b9"/><path d="m12 59 18-4 13 10-4 22-16 10-14-18Z" fill="#526e62" stroke="#dfcb94" stroke-width="2"/><path d="m25 65 0 22m-7-13h14" stroke="#e9d799" stroke-width="3"/><path d="m70 18 6 9-9 47-5-2Z" fill="#edf0db"/><path d="m56 69 17 4m-10-1-3 17" stroke="#d7bd82" stroke-width="4"/>`,
-    mage: `<path d="m27 45-11 45 29 7 24-7-15-45Z" fill="url(#BODY)"/><path d="m42 47-5 45 13 4 0-49Z" fill="#d0c7dc" opacity=".65"/><path d="m27 56-12 14 16 5m21-20 15 13" fill="none" stroke="#a49ac0" stroke-width="9"/><path d="M30 26h25v24l-14 7-12-10Z" fill="#e3c9ae"/><path d="M18 30 40 1 50 12 61 34Z" fill="#77749e"/><path d="m18 30 44 4-2 7-44-5Z" fill="#b2a4cc"/><path d="m38 17 2 6 6 2-6 2-2 6-2-6-6-2 6-2Z" fill="#eddda3"/><path d="m35 42 2 0m10 1h2" stroke="#4b4351" stroke-width="2"/><path d="M70 30 64 94" stroke="#a08c7a" stroke-width="4"/><path d="m72 10 10 13-12 15-10-14Z" fill="#d9d3ff" stroke="#f6e8c6" stroke-width="1.5"/><circle cx="71" cy="23" r="17" fill="#c9beff" opacity=".14"/><path d="m23 77 6 1m24 6 5-1" stroke="#d3c5e3" stroke-width="2"/>`,
+    mage: `<path d="M27 45Q24 69 16 90Q29 95 45 97L69 90Q59 69 54 45Z" fill="url(#BODY)"/><path d="m42 47-5 45 13 4 0-49Z" fill="#d0c7dc" opacity=".65"/><path d="m27 56-12 14 16 5m21-20 15 13" fill="none" stroke="#a49ac0" stroke-width="9"/><path d="M30 26h25v24l-14 7-12-10Z" fill="#e3c9ae"/><path d="M18 30 40 1 50 12 61 34Z" fill="#77749e"/><path d="m18 30 44 4-2 7-44-5Z" fill="#b2a4cc"/><path d="m38 17 2 6 6 2-6 2-2 6-2-6-6-2 6-2Z" fill="#eddda3"/><path d="m35 42 2 0m10 1h2" stroke="#4b4351" stroke-width="2"/><path d="M70 30 64 94" stroke="#a08c7a" stroke-width="4"/><path d="m72 10 10 13-12 15-10-14Z" fill="#d9d3ff" stroke="#f6e8c6" stroke-width="1.5"/><circle cx="71" cy="23" r="17" fill="#c9beff" opacity=".14"/><path d="m23 77 6 1m24 6 5-1" stroke="#d3c5e3" stroke-width="2"/>`,
     oracle: `<path d="M24 51Q20 74 12 87L34 84 45 98 57 87 74 87Q61 69 59 49Z" fill="url(#BODY)"/><path d="M40 47 32 83 45 91 52 80 46 47Z" fill="#d1e0d1"/><path d="M30 23Q42 11 56 25L55 46 43 54 30 43Z" fill="#e2d3bb"/><path d="M23 39Q15 8 43 8 70 10 62 43L55 32 44 19 30 30Z" fill="#a2c8c0"/><path d="M30 24Q43 2 57 24" stroke="#d8d7ad" stroke-width="3" fill="none"/><path d="m42 6 5 8-5 9-5-9Z" fill="#f1e6b7"/><path d="m35 35 4 1m8 0 4-1" stroke="#557570" stroke-width="2"/><path d="m26 53-11 13 19 6m24-19 13 14-19 7" stroke="#c1d7c5" stroke-width="7" fill="none"/><circle cx="43" cy="65" r="11" fill="#c3ebe0"/><circle cx="43" cy="65" r="17" fill="#b6e8dd" opacity=".14"/><path d="m43 55 0 20m-10-10h20" stroke="#eef2cd" stroke-width="1.5"/>`,
     rogue: `<path d="m27 35-13 35 18 17 30-12-7-38Z" fill="#48576d"/><path d="m30 49 22-5 5 34-26 0Z" fill="url(#BODY)"/><path d="m33 73-10 20 11 3 12-18 5 17 13-3-9-20" fill="#4d5663"/><path d="M24 33Q27 8 47 10 64 13 58 42L36 49Z" fill="#8491ab"/><path d="m31 29 20-1 2 17-21 0Z" fill="#d7c4b0"/><path d="m28 38 29-3-2 17-22 2Z" fill="#536880"/><path d="m35 33 3 0m9-1h3" stroke="#3f4f57" stroke-width="2"/><path d="m28 45-16 3-9-9 9 22 24-5" fill="#a7b9c2"/><path d="m29 54-9 12m34-15 13 14" stroke="#a1aeb6" stroke-width="8" fill="none"/><path d="m13 59-8 20 15-10m46-11 17 19-18-5" fill="#d3ded6"/><path d="m11 58 11 13m39-10 10 13" stroke="#d5b991" stroke-width="3"/><path d="m39 57 12 0-1 9-11 1Z" fill="#627287"/>`,
     frost: `<path d="m28 43-14 42 26 9 27-7-12-43Z" fill="url(#BODY)"/><path d="m30 45 8 19 7-7 8-14" fill="#cfdfde"/><path d="M29 24h28v23l-14 8-15-12Z" fill="#d9d9cc"/><path d="M24 39Q16 11 43 10 68 12 62 48L53 28 43 20 33 30 29 51Z" fill="#a6b9c6"/><path d="m29 20-11-7-4-12m6 12-10 1m45 5 13-8 3-10m-6 13 13-1" fill="none" stroke="#d0d9ca" stroke-width="3"/><path d="m35 36 3 0m9 0h3" stroke="#4c6774" stroke-width="2"/><path d="m27 53-12 12 15 8m24-19 12 8" fill="none" stroke="#c4d8d8" stroke-width="7"/><path d="M70 28 65 94" stroke="#9facad" stroke-width="3"/><path d="m71 17-1 20m-8-14 17 10m0-11-17 12" stroke="#d0f4f3" stroke-width="2"/><circle cx="70" cy="27" r="15" fill="#bde3f3" opacity=".14"/><path d="m27 81 4-8 4 9m17 2 4-9 4 8" fill="none" stroke="#ccdedd" stroke-width="1.5"/>`,
@@ -27,11 +27,73 @@
     sparkscout: `<path d="M29 39 13 84 37 77 57 93 60 39Z" fill="#8e6b61"/><path d="m31 47 2 30 22 1-3-32Z" fill="url(#BODY)"/><path d="m32 75-6 19 12 2 8-18 6 17 11-3-11-18" fill="#65646c"/><path d="M24 37Q23 11 43 9 65 13 59 41L44 54 28 46Z" fill="#939198"/><path d="m30 33 26-1-5 15-13 4-9-9Z" fill="#dec9ad"/><path d="m35 36h4m8 0h4" stroke="#51484a" stroke-width="2"/><path d="M25 42q16 12 35-2l4 11-23 8-21-9Z" fill="#c69677"/><path d="m62 45 25 1-12 7 11 5-23 2" fill="#c69677"/><path d="m29 57-15 13m40-15 12 11" stroke="#bfae93" stroke-width="7"/><path d="m70 36 5 13 12 6-12 4-8 26-2-25-11-5 11-6Z" fill="#e4dcc7" stroke="#bca27c" stroke-width="1.5"/><path d="m40 18 2 6 7 2-7 2-2 6-2-6-6-2 6-2Z" fill="#f1d38d"/><path d="m12 62 7 6-4 18-7-6Z" fill="#b4bcc2"/>`,
     ancient: `<path d="m28 42-8 31-13 18 26-5 12 14 14-13 27 3-14-20-7-28Z" fill="url(#BODY)"/><path d="m27 42-18 7-7 26 11 2 8-18 12-2m29-15 20 13 5 22-11 1-7-19-9-3" fill="#687f64"/><path d="m25 21 19-10 19 10 4 31-23 15-22-18Z" fill="#9aa276"/><path d="m27 32 12 4m10 0 12-4" stroke="#ebebb0" stroke-width="4"/><path d="m34 48 10 4 10-4" fill="none" stroke="#536f53" stroke-width="3"/><path d="m28 23-10-13 1-10m2 13-17-5m51 15L70 9 69 0m0 12 16-6" stroke="#708b66" stroke-width="6" fill="none"/><path d="M12 13Q1 2 9 1L21 6Q36-5 38 6L43 10Q50-3 61 4L68 8Q83-2 86 10L74 18 64 15 58 23 43 20 32 24 24 17Z" fill="#99ae72"/><path d="m41 64-5 14 8 10 9-12-6-13Z" fill="#e5df9b"/><circle cx="44" cy="75" r="15" fill="#e2e1a3" opacity=".13"/>`,
   };
+  // Fine engraving stays inside each existing silhouette; larger colour masses carry small-size recognition.
+  const details = {
+    guard:
+      '<path d="M30 24 39 20m-10 7 8-3M17 59l10-3 11 7M16 76l9 13m8-32 6 4M34 52l8 5 11-7M35 71l8 3 8-3M60 48l7-3 6 7"/><path d="M42 20v10m-3 26v12m7-13v13" opacity=".45"/>',
+    ranger:
+      '<path d="M29 25q3-9 13-9m-19 52-2 9 10-2m16-26 3 23 6 7M36 51l14 18M34 70l18-2M68 36q8 18 5 31"/><path d="M27 45l-3 20 9-4m6 18-3 11m10-12 7 12" opacity=".45"/>',
+    mage: '<path d="M23 27 38 8l5 7M21 35l33 3M26 66l-5 21 12 3m18-35 3 26 8 8M39 53l5 4 5-4M40 71l5 4 4-4M67 22l5-7 5 8-7 10Z"/><path d="M29 77l3-13m20 19-3-14M69 47l-2 20" opacity=".45"/>',
+    healer: '<path d="M19 25q2-12 15-13M24 35l11 2M26 61l-4 18 10 3m19-22 6 18M58 70l14-1M34 65h11"/>',
+    knight: '<path d="M31 25l7-8m-9 29 11 6 13-5M18 65l7-4 12 6M18 80l6 9m9-26v17M33 59l9 5 10-6M70 28l-6 31"/>',
+    oracle: '<path d="M27 26q3-11 12-12M24 64l-6 17 13-3m25-20 9 22-9-2M36 62q2-6 8-5M39 78l5 5 4-5"/>',
+    rogue: '<path d="M29 26q4-10 14-10M35 41l17-2M32 52l17 18M34 74l16-3M8 43l5 8 10-1M10 73l5-10"/>',
+    frost: '<path d="M30 22q5-7 12-6M29 58l-8 23 9 3m22-25 8 23M40 63v20m-5-10 10 5m-10 0 10-9M68 23l4 3"/>',
+    hunter: '<path d="M29 16v12m29-10-3 11M35 43l7 5 7-5M31 53l17 17M31 73l22-2M74 36q9 21 1 39"/>',
+    warden: '<path d="M29 21q4-7 12-7M14 47l13 10m-16 8 17 3M65 49l9-4M29 76l-2 7 11 6m16-12 6 6-8 4"/>',
+    breaker: '<path d="M27 22q4-9 14-8M29 31l4-3m16 3 4-3M30 48l11 5 11-6M38 60l9-2M33 78l20-4M60 25l8-10"/>',
+    hexer: '<path d="M12 40l8 5m53-5-7 5M29 24q3-9 12-9M28 70l-3 11 10 5m21-15 3 10-9 6M40 64l3-2"/>',
+    oakmaul: '<path d="M33 27l9-5m-10 28 10 5 12-6M29 74l12 6 13-6M60 35l5-2m-6 11 4 5m16-15 3 8M34 84v7"/>',
+    duskblade: '<path d="M29 27q3-12 15-13M30 46q9 6 19 2M32 58l3 13m14-13v13M20 62l-7 11 7 8m53-20 5 10-4 10"/>',
+    tideguard: '<path d="M27 24q5-13 18-11M29 51l12 6 12-7M15 64l10-6 9 7M15 76l7 11M36 65l12 3M68 80l4 5"/>',
+    wavecaller: '<path d="M28 25l7-8m12 9 9-4M29 60l-7 24 12-3m22-18 6 18M68 14q10 0 11 9M38 63l4 7"/>',
+    pearl: '<path d="M21 16l5 8m8-15 3 11m20-9-5 11m16-5-7 8M28 76l6 5h17M28 58l-6 21m34-18 5 17"/>',
+    songbird: '<path d="M27 25q4-9 13-10M34 51l14 20M32 76l17 5M13 49l10 5M60 45q17 4 18 15M52 80l22 4"/>',
+    emberguard: '<path d="M28 24l7-8h17M26 50l-9 3m48-1 7 4M34 54q7-7 15-2M30 72l5 4m17-1 5-6M31 85v7m23-7 2 6"/>',
+    cinder: '<path d="M24 27l13-16M23 36l32 3M27 65l-6 21 12 3m23-22 7 17-7 3M61 25l3-7h9M41 56l4 5"/>',
+    flarebow: '<path d="M29 23q4-9 12-7M31 30l4-3m13 3 4-3M31 49l15 21M30 75l23-3M51 57l15 7-6 4M32 83l-3 8"/>',
+    sparkscout: '<path d="M28 27q4-11 14-12M30 47q9 5 20 0M33 58l4 14m12-15 2 15M15 65l-4 13M67 52l4-7"/>',
+    ancient: '<path d="M29 25l11-8m-9 28 5 2m17-3 5-2M30 55l10 6m-14 6-9 17 13-4m28-15 7 17-9-2M42 69l-2 8 4 5"/>',
+  };
+  function shade(hex, amount) {
+    const channels = hex
+      .slice(1)
+      .match(/../g)
+      .map(c => parseInt(c, 16));
+    return (
+      '#' +
+      channels
+        .map(c =>
+          Math.round(c + ((amount > 0 ? 255 : 0) - c) * Math.abs(amount))
+            .toString(16)
+            .padStart(2, '0'),
+        )
+        .join('')
+    );
+  }
+  // Prepare colour ramps once, then namespace their IDs per portrait to avoid SVG collisions.
+  const figures = Object.fromEntries(
+    Object.entries(ornaments).map(([type, drawing]) => {
+      const colors = [...new Set([...drawing.matchAll(/fill="(#[a-f0-9]{6})"/g)].map(m => m[1]))];
+      const defs = colors
+        .map(
+          (color, i) =>
+            `<linearGradient id="BODY-m${i}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${shade(color, 0.22)}"/><stop offset=".38" stop-color="${color}"/><stop offset="1" stop-color="${shade(color, -0.32)}"/></linearGradient>`,
+        )
+        .join('');
+      const body = drawing.replace(
+        /fill="(#[a-f0-9]{6})"/g,
+        (_, color) => `fill="url(#BODY-m${colors.indexOf(color)})"`,
+      );
+      return [type, { defs, body }];
+    }),
+  );
   function portrait(type) {
-    const d = GameEngine.TYPES[type] || GameEngine.TYPES.guard,
-      id = 'p' + serial++,
-      body = (ornaments[type] || ornaments.guard).replaceAll('BODY', id);
-    return `<svg class="portrait portrait-${d.role}" viewBox="0 0 96 104" aria-hidden="true"><defs><linearGradient id="${id}" x1="0" y1="0" x2=".8" y2="1"><stop stop-color="#f0edcf"/><stop offset=".22" stop-color="${d.color}"/><stop offset="1" stop-color="#344e49"/></linearGradient></defs><ellipse cx="45" cy="97" rx="31" ry="5" fill="#071d1b" opacity=".4"/><g class="character-figure" stroke="#162f2a88" stroke-width="1" stroke-linejoin="round">${body}</g></svg>`;
+    const key = Object.hasOwn(figures, type) ? type : 'guard';
+    const d = GameEngine.TYPES[key],
+      id = 'p' + serial++;
+    const figure = figures[key];
+    return `<svg class="portrait portrait-${d.role}" viewBox="0 0 96 104" aria-hidden="true"><defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${shade(d.color, 0.28)}"/><stop offset=".4" stop-color="${d.color}"/><stop offset="1" stop-color="${shade(d.color, -0.45)}"/></linearGradient>${figure.defs.replaceAll('BODY', id)}<radialGradient id="${id}-ground"><stop stop-color="#061612" stop-opacity=".6"/><stop offset="1" stop-color="#061612" stop-opacity="0"/></radialGradient></defs><ellipse class="portrait-ground" cx="46" cy="97" rx="33" ry="6" fill="url(#${id}-ground)"/><g class="character-figure" stroke="#172b30" stroke-opacity=".72" stroke-width=".85" stroke-linejoin="round" stroke-linecap="round">${figure.body.replaceAll('BODY', id)}<g class="character-detail" fill="none" stroke="#fff0cd" stroke-opacity=".55" stroke-width="1.1">${details[key]}</g></g></svg>`;
   }
   root.UnitArt = portrait;
 })(window);

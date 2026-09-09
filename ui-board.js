@@ -107,9 +107,11 @@
         )
         .join(''),
     );
+    $('scout-tip').classList.toggle('boss-note', node.kind === 'boss');
+    $('scout-tip').dataset.chapter = E.CHAPTERS[node.act].theme;
     T.paint(
       'scout-tip',
-      `<strong>✧ ${combat ? '战术手记' : '远征手记'}</strong>${combat ? E.AFFIXES[node.affix].desc + ' ' + node.tip : '每个节点只处理一次。伙伴始终保留，远征生命与金币决定你能走多远。'}`,
+      `${node.kind === 'boss' ? `<p class="boss-atmosphere">${T.chapterAtmosphere(node.act).boss}</p>` : ''}<strong>✧ ${combat ? '战术手记' : '远征手记'}</strong>${combat ? E.AFFIXES[node.affix].desc + ' ' + node.tip : '每个节点只处理一次。伙伴始终保留，远征生命与金币决定你能走多远。'}`,
     );
     $('inspect-enemy').hidden = !combat || state.phase === 'map';
   }
@@ -306,7 +308,7 @@
           if (!id) return '<div class="sold"><strong>❧</strong><span>伙伴已加入旅途</span></div>';
           const d = E.TYPES[id],
             n = state.units.filter(u => u.type === id && u.star === 1).length;
-          return `<article class="shop-card ${state.gold >= d.cost ? 'affordable' : ''}" style="--color:${d.color}"><div class="shop-portrait">${art(id)}<span class="card-cost">◈ ${d.cost}</span><button class="card-info-button" data-codex="${id}" title="查看技能" aria-label="查看 ${d.name} 技能">i</button>${n ? `<span class="owned-badge">${n >= 2 ? '✦ 招募即可升星' : '已拥有 ' + n + ' / 3'}</span>` : ''}</div><div class="card-info"><div class="card-name">${d.name}<span>★</span></div><div class="card-tags">${T.factionName(id)} · ${E.ROLES[d.role]}</div><div class="card-stats"><span>♥ ${d.hp}</span><span>⚔ ${d.atk}</span><span>⬡ ${d.armor}</span></div><button class="recruit" data-buy="${index}" ${!prep || state.gold < d.cost ? 'disabled' : ''}>${state.gold < d.cost ? '金币不足' : '招募伙伴'} <span>＋</span></button></div></article>`;
+          return `<article class="shop-card ${state.gold >= d.cost ? 'affordable' : ''}" style="--color:${d.color}"><div class="shop-portrait">${art(id)}<span class="card-cost">${T.icon('coin')} ${d.cost}</span><button class="card-info-button" data-codex="${id}" title="查看技能" aria-label="查看 ${d.name} 技能">${T.icon('info')}</button>${n ? `<span class="owned-badge">${n >= 2 ? '✦ 招募即可升星' : '已拥有 ' + n + ' / 3'}</span>` : ''}</div><div class="card-info"><div class="card-name">${d.name}<span>★</span></div><div class="card-tags">${T.factionName(id)} · ${E.ROLES[d.role]}</div><div class="card-stats"><span aria-label="生命 ${d.hp}">${T.icon('health')} ${d.hp}</span><span aria-label="攻击 ${d.atk}">${T.icon('attack')} ${d.atk}</span><span aria-label="护甲 ${d.armor}">${T.icon('shield')} ${d.armor}</span></div><button class="recruit" data-buy="${index}" ${!prep || state.gold < d.cost ? 'disabled' : ''}>${state.gold < d.cost ? '金币不足' : '招募伙伴'} <span>＋</span></button></div></article>`;
         })
         .join(''),
     );
@@ -391,7 +393,8 @@
           : '路线、掉落与事件均按种子保存',
     );
     T.text('speed', '×' + (prefs.speed || 1));
-    T.text('sound', prefs.enabled ? '♫' : '♪');
+    T.paint('sound', T.icon(prefs.enabled ? 'sound' : 'mute'));
+    T.paint('settings', T.icon('settings'));
     $('sound').setAttribute('aria-label', prefs.enabled ? '关闭音效' : '开启音效');
     $('sound').setAttribute('aria-pressed', String(prefs.enabled));
   }
