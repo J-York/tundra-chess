@@ -155,7 +155,18 @@
     const mark =
       glyphs[type] ||
       glyphs[
-        { oakmaul: 'hunter', duskblade: 'rogue', sparkscout: 'mage', cinder: 'breaker', flarebow: 'hunter' }[type]
+        {
+          oakmaul: 'hunter',
+          duskblade: 'rogue',
+          sparkscout: 'mage',
+          cinder: 'breaker',
+          flarebow: 'hunter',
+          driftbow: 'hunter',
+          stargazer: 'mage',
+          vineclaw: 'rogue',
+          mistcaller: 'frost',
+          wavecaller: 'frost',
+        }[type]
       ];
     if (!mark) return;
     const path = document.createElementNS(svg, 'path');
@@ -212,6 +223,10 @@
         projectile(ev.from, ev.pos, 'breaker');
         impact(ev.pos, 'shatter');
       }
+      if (ev.type === 'mark') {
+        floatText(ev.pos, '✦ 易伤 +' + Math.round(ev.value * 100) + '%', 'critical');
+        ring(ev.pos, '#e7c58f', 48);
+      }
       if (ev.type === 'push') {
         ring(ev.from, '#b9debb', 30);
         ring(ev.to, '#b9debb', 35);
@@ -228,9 +243,19 @@
           actor.classList.add('casting');
         }
         if (
-          !['healer', 'oracle', 'warden', 'knight', 'pearl', 'tideguard', 'songbird', 'emberguard'].includes(
-            ev.unitType,
-          )
+          ![
+            'healer',
+            'oracle',
+            'warden',
+            'knight',
+            'pearl',
+            'tideguard',
+            'songbird',
+            'emberguard',
+            'emberdrum',
+            'saltforge',
+            'prismguard',
+          ].includes(ev.unitType)
         )
           ring(
             ['guard', 'oakmaul'].includes(ev.unitType) ? ev.pos : ev.to,
@@ -240,10 +265,21 @@
         spellMark(ev.to, ev.unitType);
         if (ev.unitType === 'wavecaller')
           for (let col = 0; col < 6; col++) ring(Math.floor(ev.to / 6) * 6 + col, '#9edfe7', 30);
+        if (ev.unitType === 'driftbow') for (let row = 0; row < 6; row++) ring((ev.to % 6) + row * 6, '#8fd0c8', 30);
         audio.play(
-          ['healer', 'oracle', 'pearl'].includes(ev.unitType)
+          ['healer', 'oracle', 'pearl', 'emberdrum'].includes(ev.unitType)
             ? 'heal'
-            : ['guard', 'knight', 'warden', 'tideguard', 'songbird', 'emberguard'].includes(ev.unitType)
+            : [
+                  'guard',
+                  'knight',
+                  'warden',
+                  'tideguard',
+                  'songbird',
+                  'emberguard',
+                  'saltforge',
+                  'prismguard',
+                  'nightdew',
+                ].includes(ev.unitType)
               ? 'shield'
               : 'magic',
         );

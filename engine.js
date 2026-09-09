@@ -7,8 +7,11 @@
     HOME = 18,
     BENCH = 8,
     LAST_STAGE = W.CHAPTERS.length * W.FLOORS - 1;
-  const RULESET = 'companions-22';
+  const RULESET = 'companions-30';
   const LEGACY_RULESET = 'twelve-1';
+  // Saves and records written before this ruleset stay readable: an expedition already on the
+  // road keeps its generated map and finishes under the current rules.
+  const PRIOR_RULESETS = [LEGACY_RULESET, 'companions-22'];
   // Rule constants shared by the battle code and by the text that describes it. Anything a
   // skill description quotes lives here or in that skill's params, never as a loose literal.
   const MAX_MANA = 100;
@@ -18,6 +21,8 @@
   const AMBUSH_SECONDS = 1.5;
   const STEALTH_SECONDS = 1;
   const REFINE = 1.6;
+  const MARK_SECONDS = 4;
+  const RAMP_STACKS = 10;
   const pct = value => Math.round(value * 1000) / 10;
   const num = value => Math.round(value * 10) / 10;
   const cn = value => ['零', '一', '两', '三', '四', '五', '六'][value] ?? String(value);
@@ -376,6 +381,128 @@
       desc: '对当前目标造成 200% 攻击的物理伤害并眩晕 1 秒。开场潜伏 1.5 秒后切入，落地有 1 秒影幕保护；同时计入星辉与余烬羁绊。',
       flavor: '他追逐的星光，落地时成了火。',
     },
+    driftbow: {
+      name: '浪弦弓手',
+      faction: 'tide',
+      role: 'ranger',
+      cost: 3,
+      hp: 145,
+      atk: 32,
+      armor: 5,
+      range: 4,
+      interval: 1.25,
+      mana: 20,
+      color: '#8fc6c0',
+      skill: '贯穿箭',
+      flavor: '一箭出去，浪就替她数着人头。',
+    },
+    stargazer: {
+      name: '观星射手',
+      faction: 'astral',
+      role: 'ranger',
+      cost: 4,
+      hp: 150,
+      atk: 35,
+      armor: 6,
+      range: 5,
+      interval: 1.3,
+      mana: 30,
+      color: '#c8c08e',
+      skill: '星轨箭',
+      flavor: '她先在星图上画好落点，再抬手。',
+    },
+    emberdrum: {
+      name: '灰烬鼓手',
+      faction: 'ember',
+      role: 'support',
+      cost: 3,
+      hp: 165,
+      atk: 22,
+      armor: 8,
+      range: 3,
+      interval: 1.4,
+      mana: 40,
+      color: '#dda183',
+      skill: '熔火战鼓',
+      flavor: '鼓点一起，谁都想再往前一步。',
+    },
+    vineclaw: {
+      name: '藤影猎豹',
+      faction: 'forest',
+      role: 'assassin',
+      cost: 2,
+      hp: 150,
+      atk: 30,
+      armor: 6,
+      range: 1,
+      interval: 1.05,
+      mana: 20,
+      color: '#9dbb7e',
+      skill: '荆棘猎杀',
+      flavor: '它只等对方露出一次疲态。',
+    },
+    nightdew: {
+      name: '夜露卫士',
+      faction: 'moon',
+      role: 'guardian',
+      cost: 3,
+      hp: 250,
+      atk: 24,
+      armor: 20,
+      range: 1,
+      interval: 1.45,
+      mana: 30,
+      color: '#9aa8c6',
+      skill: '露华壁',
+      flavor: '露水结成的墙，比铁还记仇。',
+    },
+    saltforge: {
+      name: '盐炉铸师',
+      faction: 'ember',
+      extraFaction: 'tide',
+      role: 'guardian',
+      cost: 4,
+      hp: 265,
+      atk: 28,
+      armor: 24,
+      range: 1,
+      interval: 1.5,
+      mana: 40,
+      color: '#c9a98f',
+      skill: '熔盐屏障',
+      flavor: '海盐与炉火，在他手里是同一种东西。',
+    },
+    mistcaller: {
+      name: '雾语行者',
+      faction: 'moon',
+      extraFaction: 'forest',
+      role: 'mage',
+      cost: 2,
+      hp: 140,
+      atk: 26,
+      armor: 4,
+      range: 4,
+      interval: 1.45,
+      mana: 35,
+      color: '#a9c3bd',
+      skill: '迷雾低语',
+      flavor: '雾里说话的人，让追兵忘了力气。',
+    },
+    prismguard: {
+      name: '棱光卫',
+      faction: 'astral',
+      role: 'guardian',
+      cost: 2,
+      hp: 235,
+      atk: 21,
+      armor: 20,
+      range: 1,
+      interval: 1.45,
+      mana: 25,
+      color: '#c3c9e0',
+      skill: '棱光庇护',
+      flavor: '他把星光折成一面墙，也折成同伴的力气。',
+    },
     ancient: {
       name: '古树守望者',
       faction: 'wild',
@@ -393,32 +520,120 @@
       flavor: '整片森林，在它的胸膛里呼吸。',
     },
   };
-  const FACTIONS = {
+  // A trait is a list of thresholds and the values each one grants. stats() reads the values,
+  // the synergy panel prints the rendered text, and neither can drift from the other. Adding a
+  // tier is one entry here rather than a rule edit plus a prose edit that must agree.
+  const FACTION_DEFS = {
     forest: {
       name: '林地',
       icon: '❧',
-      thresholds: [2, 3],
-      desc: ['全队生命 +18%', '全队生命 +28%，每秒恢复 0.8% 最大生命'],
+      thresholds: [2, 3, 4],
+      tiers: [{ hp: 0.16 }, { hp: 0.26, regen: 0.008 }, { hp: 0.38, regen: 0.015 }],
+      text: v => `全队生命 +${pct(v.hp)}%` + (v.regen ? `，每秒恢复 ${pct(v.regen)}% 最大生命` : ''),
     },
     astral: {
       name: '星辉',
       icon: '✧',
-      thresholds: [2, 3],
-      desc: ['全队技能强度 +20%', '全队技能强度 +35%，初始法力 +15'],
+      thresholds: [2, 3, 4],
+      tiers: [{ power: 0.2 }, { power: 0.35, mana: 15 }, { power: 0.5, mana: 25, manaRegen: 2 }],
+      text: v =>
+        `全队技能强度 +${pct(v.power)}%` +
+        (v.mana ? `，初始法力 +${num(v.mana)}` : '') +
+        (v.manaRegen ? `，每秒额外恢复 ${num(v.manaRegen)} 法力` : ''),
     },
     tide: {
       name: '潮汐',
       icon: '≈',
-      thresholds: [2, 3],
-      desc: ['开战时全队获得 25 点护盾', '开战时全队获得 45 点护盾，治疗效果 +20%'],
+      thresholds: [2, 3, 4],
+      tiers: [{ shield: 28 }, { shield: 50, healing: 0.2 }, { shield: 85, healing: 0.35, shieldTime: 3 }],
+      text: v =>
+        `开战时全队获得 ${num(v.shield)} 点护盾` +
+        (v.healing ? `，治疗效果 +${pct(v.healing)}%` : '') +
+        (v.shieldTime ? `，所有护盾持续时间 +${num(v.shieldTime)} 秒` : ''),
     },
-    ember: { name: '余烬', icon: '♨', thresholds: [2, 3], desc: ['全队攻击 +8%', '全队攻击 +14%，攻击速度 +8%'] },
+    ember: {
+      name: '余烬',
+      icon: '♨',
+      thresholds: [2, 3, 4],
+      tiers: [{ atk: 0.07 }, { atk: 0.13, haste: 0.07 }, { atk: 0.2, haste: 0.12, splash: 0.15 }],
+      text: v =>
+        `全队攻击 +${pct(v.atk)}%` +
+        (v.haste ? `，攻击速度 +${pct(v.haste)}%` : '') +
+        (v.splash ? `，普攻溅射 ${pct(v.splash)}% 攻击的魔法伤害到目标相邻的敌人` : ''),
+    },
     moon: {
       name: '月影',
       icon: '☽',
-      thresholds: [2, 3],
-      desc: ['全队普攻暴击率 +15%', '全队普攻暴击率 +30%，暴击伤害提高至 175%'],
+      thresholds: [2, 3, 4],
+      tiers: [{ crit: 0.15 }, { crit: 0.28, critPower: 0.25 }, { crit: 0.42, critPower: 0.45, spellCrit: 0.5 }],
+      text: v =>
+        `全队普攻暴击率 +${pct(v.crit)}%` +
+        (v.critPower ? `，暴击伤害提高至 ${pct(1.5 + v.critPower)}%` : '') +
+        (v.spellCrit ? `，技能也能暴击，暴击率为普攻的 ${pct(v.spellCrit)}%` : ''),
     },
+  };
+  const ROLE_DEFS = {
+    guardian: {
+      name: '铁壁',
+      icon: '⬡',
+      thresholds: [2, 3, 4],
+      tiers: [{ armor: 8 }, { armor: 16, regen: 0.01 }, { armor: 26, regen: 0.02 }],
+      text: v => `全队护甲 +${num(v.armor)}` + (v.regen ? `，守卫每秒恢复 ${pct(v.regen)}% 最大生命` : ''),
+    },
+    ranger: {
+      name: '追风',
+      icon: '➶',
+      thresholds: [2, 3],
+      tiers: [{ haste: 0.18 }, { haste: 0.32, trueShot: 0.15 }],
+      text: v =>
+        `游侠攻击速度 +${pct(v.haste)}%` + (v.trueShot ? `，普攻额外造成 ${pct(v.trueShot)}% 攻击的真实伤害` : ''),
+    },
+    mage: {
+      name: '共鸣',
+      icon: '✶',
+      thresholds: [2, 3, 4],
+      tiers: [{ manaRegen: 3 }, { manaRegen: 5, power: 0.12 }, { manaRegen: 7, power: 0.25 }],
+      text: v => `全队每秒额外恢复 ${num(v.manaRegen)} 法力` + (v.power ? `，技能强度 +${pct(v.power)}%` : ''),
+    },
+    support: {
+      name: '协奏',
+      icon: '♫',
+      thresholds: [2, 3, 4],
+      tiers: [{ healing: 0.2 }, { healing: 0.35, mana: 20 }, { healing: 0.5, mana: 30, castMana: 15 }],
+      text: v =>
+        `辅助的治疗效果 +${pct(v.healing)}%` +
+        (v.mana ? `，辅助初始法力 +${num(v.mana)}` : '') +
+        (v.castMana ? `，辅助每次施法后恢复 ${num(v.castMana)} 法力` : ''),
+    },
+    assassin: {
+      name: '夜行',
+      icon: '☾',
+      thresholds: [2, 3],
+      tiers: [{ crit: 0.15 }, { crit: 0.27, critPower: 0.3 }],
+      text: v =>
+        `刺客普攻暴击率 +${pct(v.crit)}%` + (v.critPower ? `，刺客暴击伤害 +${pct(v.critPower)} 个百分点` : ''),
+    },
+  };
+  const rendered = defs => {
+    const out = {};
+    for (const [id, d] of Object.entries(defs))
+      out[id] = { name: d.name, icon: d.icon, thresholds: d.thresholds, desc: d.tiers.map(d.text) };
+    return out;
+  };
+  const FACTIONS = rendered(FACTION_DEFS);
+  const TRAIT_DEFS = { ...FACTION_DEFS, ...ROLE_DEFS };
+  // The highest threshold a count reaches, or -1 when the trait is not active yet.
+  const tierIndex = (id, n) => {
+    const th = TRAIT_DEFS[id].thresholds;
+    let found = -1;
+    for (let i = 0; i < th.length; i++) if (n >= th[i]) found = i;
+    return found;
+  };
+  // The values a trait currently grants: an empty object when it is inactive, so every read
+  // below can use `?? 0` without asking whether the trait is on at all.
+  const tierOf = (id, counts) => {
+    const i = tierIndex(id, counts[id] || 0);
+    return i < 0 ? {} : TRAIT_DEFS[id].tiers[i];
   };
   // Every number a skill uses lives here once: cast() reads the params, and the companion's
   // description is rendered from the same values. The two cannot drift apart, and a tuning
@@ -534,6 +749,52 @@
         `对当前目标造成 ${pct(p.ratio)}% 攻击的物理伤害并眩晕 ${num(p.stun)} 秒。` +
         `开场潜伏 ${num(AMBUSH_SECONDS)} 秒后切入，落地有 ${num(STEALTH_SECONDS)} 秒影幕保护；同时计入星辉与余烬羁绊。`,
     },
+    driftbow: {
+      params: { ratio: 1.55 },
+      text: p => `箭矢贯穿当前目标所在的整列，对这一列的敌人造成 ${pct(p.ratio)}% 攻击的物理伤害。`,
+    },
+    stargazer: {
+      params: { ratio: 1.5, mark: 0.25, duration: 6 },
+      text: p =>
+        `对距离最远的敌人造成 ${pct(p.ratio)}% 攻击的物理伤害，并标记 ${num(p.duration)} 秒：` +
+        `被标记者受到的伤害提高 ${pct(p.mark)}%。`,
+    },
+    emberdrum: {
+      params: { haste: 0.35, duration: 6, flat: 40, healRatio: 0.8, targets: 2 },
+      text: p =>
+        `为攻击最高的${cn(p.targets)}名友军擂鼓 ${num(p.duration)} 秒：攻击速度 +${pct(p.haste)}%，` +
+        `并各治疗 ${num(p.flat)} + ${pct(p.healRatio)}% 攻击。`,
+    },
+    vineclaw: {
+      params: { ratio: 1.8, executeRatio: 3, threshold: 0.4 },
+      text: p =>
+        `对当前目标造成 ${pct(p.ratio)}% 攻击的物理伤害；目标生命低于 ${pct(p.threshold)}% 时提高到 ` +
+        `${pct(p.executeRatio)}%。与所有刺客一样，开场潜伏 ${num(AMBUSH_SECONDS)} 秒后切入。`,
+    },
+    nightdew: {
+      params: { flat: 70, ratio: 0.9, taunt: 2, reflect: 0.35 },
+      text: p =>
+        `获得 ${num(p.flat)} + ${pct(p.ratio)}% 攻击的护盾（${SHIELD_SECONDS} 秒）并嘲讽 ${TAUNT_RANGE} 格内敌人 ` +
+        `${num(p.taunt)} 秒；护盾还在时，把所受伤害（含被护盾吸收的部分）的 ${pct(p.reflect)}% 作为真实伤害反弹。`,
+    },
+    saltforge: {
+      params: { flat: 60, ratio: 0.9, targets: 3 },
+      text: p =>
+        `为护盾最薄的${cn(p.targets)}名友军各施加 ${num(p.flat)} + ${pct(p.ratio)}% 攻击的护盾，` +
+        `持续 ${SHIELD_SECONDS} 秒。`,
+    },
+    mistcaller: {
+      params: { ratio: 1.2, radius: 1, slow: 3, weaken: 0.2, duration: 4 },
+      text: p =>
+        `对目标及其 ${num(p.radius)} 格内敌人造成 ${pct(p.ratio)}% 攻击的魔法伤害，减速 ${num(p.slow)} 秒，` +
+        `并削弱 ${num(p.duration)} 秒：它们造成的伤害降低 ${pct(p.weaken)}%。`,
+    },
+    prismguard: {
+      params: { flat: 60, ratio: 0.8, mana: 20, targets: 2 },
+      text: p =>
+        `自身获得 ${num(p.flat)} + ${pct(p.ratio)}% 攻击的护盾（${SHIELD_SECONDS} 秒），` +
+        `并为最近的${cn(p.targets)}名其他友军各恢复 ${num(p.mana)} 法力。`,
+    },
     ancient: {
       params: { ratio: 0.85, fury: 0.35 },
       text: p => `震击全场造成 ${pct(p.ratio)}% 攻击的魔法伤害；半血时狂怒，攻击速度提升 ${pct(p.fury)}%。`,
@@ -556,13 +817,7 @@
     return (def.cost === 4 ? 2 : 3) + (LARGEST_FACTION - smallest);
   };
   const ROLES = { guardian: '守卫', ranger: '游侠', mage: '法师', support: '辅助', assassin: '刺客' };
-  const ROLE_TRAITS = {
-    guardian: { name: '铁壁', icon: '⬡', desc: '2 种守卫：全队护甲 +8' },
-    ranger: { name: '追风', icon: '➶', desc: '2 种游侠：游侠攻击速度 +18%' },
-    support: { name: '协奏', icon: '♫', desc: '2 种辅助：辅助的治疗效果 +20%' },
-    assassin: { name: '夜行', icon: '☾', desc: '2 种刺客：刺客普攻暴击率 +15%' },
-    mage: { name: '共鸣', icon: '✶', desc: '2 种法师：每秒额外恢复 3 法力' },
-  };
+  const ROLE_TRAITS = rendered(ROLE_DEFS);
   // Equipment text is generated from the stats themselves, so a value and its description
   // cannot drift apart. Refined copies scale the stats and re-render the same template, which
   // replaces a regex that multiplied every number in the prose — including ones that must not
@@ -581,6 +836,9 @@
     'critPower',
     'castMana',
     'emergencyShield',
+    'resist',
+    'ramp',
+    'mark',
   ];
   const ITEM_DEFS = {
     blade: { name: '风纹短刃', icon: '⚔', stats: { atk: 0.22 }, text: s => `攻击 +${pct(s.atk)}%` },
@@ -626,6 +884,26 @@
       stats: { power: 0.1, castMana: 12 },
       text: s => `技能强度 +${pct(s.power)}%；每次施法后恢复 ${num(s.castMana)} 法力`,
     },
+    warhorn: {
+      name: '猎战号角',
+      icon: '⌁',
+      stats: { haste: 0.12, ramp: 0.03 },
+      // The stack cap is a rule, not a number that scales with refinement.
+      text: s => `攻击速度 +${pct(s.haste)}%；每次普攻叠加 ${pct(s.ramp)}% 攻击，最多 ${num(RAMP_STACKS)} 层`,
+    },
+    mantle: {
+      name: '霜纹披风',
+      icon: '❆',
+      stats: { armor: 10, resist: 0.25 },
+      text: s => `护甲 +${num(s.armor)}，受到的魔法伤害降低 ${pct(s.resist)}%`,
+    },
+    catalyst: {
+      name: '星尘触媒',
+      icon: '✵',
+      stats: { power: 0.15, mark: 0.15 },
+      text: s =>
+        `技能强度 +${pct(s.power)}%；技能命中的敌人被标记 ${num(MARK_SECONDS)} 秒，受到的伤害提高 ${pct(s.mark)}%`,
+    },
     heartwood: {
       name: '余烬木心',
       icon: '♧',
@@ -636,7 +914,26 @@
         `获得最大生命 ${pct(s.emergencyShield)}% 的护盾，持续 ${SHIELD_SECONDS} 秒`,
     },
   };
+  // Emblems are the pivot: one item slot buys a faction the companion was not born into, so a
+  // trait tier can be finished with a purchase instead of a lucky tavern. They are never refined,
+  // which keeps 营地 and the drop tables working on basic equipment alone.
+  const EMBLEM_DEFS = {
+    forest: { name: '林语纹章', icon: '❧', stats: { hp: 0.12 }, text: s => `生命 +${pct(s.hp)}%` },
+    astral: { name: '星轨纹章', icon: '✧', stats: { power: 0.12 }, text: s => `技能强度 +${pct(s.power)}%` },
+    tide: { name: '汐纹纹章', icon: '≈', stats: { healing: 0.15 }, text: s => `治疗效果 +${pct(s.healing)}%` },
+    ember: { name: '炉火纹章', icon: '♨', stats: { atk: 0.1 }, text: s => `攻击 +${pct(s.atk)}%` },
+    moon: { name: '蚀月纹章', icon: '☽', stats: { crit: 0.1 }, text: s => `普攻暴击率 +${pct(s.crit)}%` },
+  };
   const ITEMS = {};
+  for (const [faction, def] of Object.entries(EMBLEM_DEFS))
+    ITEMS['emblem_' + faction] = {
+      name: def.name,
+      icon: def.icon,
+      faction,
+      desc: `佩戴者额外计入${FACTIONS[faction].name}羁绊（同一伙伴只计一次）；${def.text(def.stats)}`,
+      ...def.stats,
+    };
+  const EMBLEM_ITEMS = Object.keys(EMBLEM_DEFS).map(id => 'emblem_' + id);
   for (const [id, def] of Object.entries(ITEM_DEFS)) {
     const refined = {};
     for (const key of ITEM_STATS)
@@ -721,6 +1018,27 @@
         `友军主动治疗的溢出量有 ${pct(v.share)}% 转为 ${SHIELD_SECONDS} 秒护盾；` +
         `最多补到目标最大生命的 ${pct(v.cap)}%，生命自然回复不触发`,
     },
+    prism: {
+      name: '棱光石',
+      icon: '✵',
+      build: 'spell',
+      values: { share: 0.5 },
+      text: v => `友军技能也能暴击，暴击率为普攻暴击率的 ${pct(v.share)}%；与月影四层不重复叠加`,
+    },
+    hunt: {
+      name: '猎影印记',
+      icon: '☾',
+      build: 'execute',
+      values: { bonus: 0.2, threshold: 0.4 },
+      text: v => `对生命低于 ${pct(v.threshold)}% 的敌人造成的伤害提高 ${pct(v.bonus)}%`,
+    },
+    beacon: {
+      name: '灼印信标',
+      icon: '✧',
+      build: 'mark',
+      values: { amp: 0.1, extend: 2 },
+      text: v => `友军施加的标记额外提高 ${pct(v.amp)} 个百分点的易伤，并延长 ${num(v.extend)} 秒`,
+    },
     spring: { name: '林间泉水', icon: '♧', values: { life: 25 }, text: v => `立即恢复 ${num(v.life)} 点远征生命` },
     purse: { name: '旅人的钱袋', icon: '◈', values: { gold: 7 }, text: v => `立即获得 ${num(v.gold)} 金币` },
   };
@@ -749,7 +1067,7 @@
       name: '林地守望',
       desc: '守卫 + 游侠 · 生命羁绊，稳健开局',
       types: ['guard', 'ranger'],
-      opening: ['healer', 'frost', 'mage'],
+      opening: ['vineclaw', 'healer', 'mistcaller'],
       gold: 11,
       icon: '❧',
     },
@@ -757,7 +1075,7 @@
       name: '群星秘术',
       desc: '骑士 + 法师 · 技能羁绊，爆发法术',
       types: ['knight', 'mage'],
-      opening: ['healer', 'frost', 'mage'],
+      opening: ['prismguard', 'healer', 'oracle'],
       gold: 9,
       icon: '✧',
     },
@@ -765,7 +1083,7 @@
       name: '月影突袭',
       desc: '刺客 + 猎手 · 暴击羁绊，直取后排',
       types: ['rogue', 'hunter'],
-      opening: ['healer', 'frost', 'mage'],
+      opening: ['nightdew', 'healer', 'mistcaller'],
       gold: 9,
       icon: '☽',
     },
@@ -773,7 +1091,7 @@
       name: '潮汐同舟',
       desc: '守卫 + 法师 · 护盾羁绊，稳步推进',
       types: ['tideguard', 'wavecaller'],
-      opening: ['pearl', 'healer', 'mage'],
+      opening: ['driftbow', 'pearl', 'healer'],
       gold: 10,
       icon: '≈',
     },
@@ -781,7 +1099,7 @@
       name: '余烬行军',
       desc: '守卫 + 游侠 · 攻击羁绊，火力压制',
       types: ['emberguard', 'flarebow'],
-      opening: ['sparkscout', 'healer', 'mage'],
+      opening: ['emberdrum', 'sparkscout', 'healer'],
       gold: 10,
       icon: '♨',
     },
@@ -804,7 +1122,7 @@
     scarcity: { name: '流水行囊', desc: '胜利不再获得金币利息，其他收入保持正常。' },
     bare: { name: '赤手守望', desc: '伙伴不能穿戴装备，依靠羁绊与遗物通关。' },
   };
-  const maxCapacity = s => (s.challenge === 'quartet' ? 4 : 6);
+  const maxCapacity = s => (s.challenge === 'quartet' ? 4 : 7);
   function parseSeed(input) {
     const value = String(input ?? '').trim();
     if (!value) return { seed: null };
@@ -893,12 +1211,39 @@
         name: '满溢春潮',
         relic: 'overflow',
         ready:
-          ['healer', 'oracle', 'pearl', 'oakmaul', 'duskblade'].some(hasType) ||
+          ['healer', 'oracle', 'pearl', 'oakmaul', 'duskblade', 'emberdrum'].some(hasType) ||
           hasItem('fang') ||
           hasRelic('moonwell'),
         source: '主动治疗伙伴、吸血或赤月泉石',
         desc: '超过生命上限的主动治疗 → 转为护盾 → 满血时治疗仍有价值。',
         tip: '复苏琥珀增加溢出量；最多补到目标 25% 最大生命的护盾，自然回复不触发。',
+      },
+      {
+        id: 'spell',
+        name: '棱光暴术',
+        relic: 'prism',
+        ready: t.astral >= 2 || t.mage >= 2 || t.moon >= 2 || hasItem('moonlens') || hasItem('wand'),
+        source: '星辉、共鸣、月影羁绊或暴击 / 强度装备',
+        desc: '提高暴击率 → 技能也能暴击 → 一次施法同时放大伤害、护盾与治疗。',
+        tip: '月影四层自带技能暴击，与棱光石取较高值；技能暴击按暴击倍率放大整个技能。',
+      },
+      {
+        id: 'execute',
+        name: '猎影收割',
+        relic: 'hunt',
+        ready: t.assassin >= 2 || t.ranger >= 2 || hasType('vineclaw') || hasType('cinder') || hasItem('warhorn'),
+        source: '刺客、游侠、藤影猎豹或猎战号角',
+        desc: '压低敌人生命 → 残血目标承受更多伤害 → 抢在对方治疗前结束战斗。',
+        tip: '藤影猎豹的斩杀线与印记同为 40%，两者相乘；护盾会推迟触发。',
+      },
+      {
+        id: 'mark',
+        name: '灼印猎场',
+        relic: 'beacon',
+        ready: hasType('stargazer') || hasType('hexer') || hasItem('catalyst') || t.astral >= 2,
+        source: '观星射手、星尘触媒或星辉羁绊',
+        desc: '标记目标 → 全队对它的伤害提高 → 集火同一个敌人。',
+        tip: '标记只取最高的一层，但持续时间取较长的；信标同时加强所有来源的标记。',
       },
     ];
     return builds.map(b => ({ ...b, owned: hasRelic(b.relic), active: hasRelic(b.relic) && b.ready }));
@@ -971,10 +1316,20 @@
   }
   const factionIds = type => [TYPES[type].faction, ...(TYPES[type].extraFaction ? [TYPES[type].extraFaction] : [])];
   const hasFaction = (type, faction) => factionIds(type).includes(faction);
+  // An emblem counts its bearer into one more faction. The key is the type plus the faction so
+  // two copies of the same companion wearing the same emblem still count once, exactly like two
+  // copies of a native member do.
+  const emblemFaction = u => ITEMS[u.item]?.faction;
   function traits(roster) {
     const result = {};
-    for (const f of Object.keys(FACTIONS))
-      result[f] = new Set(roster.filter(u => hasFaction(u.type, f)).map(u => u.type)).size;
+    for (const f of Object.keys(FACTIONS)) {
+      const seen = new Set();
+      for (const u of roster) {
+        if (hasFaction(u.type, f)) seen.add(u.type);
+        else if (emblemFaction(u) === f) seen.add(u.type + '\u00b7' + f);
+      }
+      result[f] = seen.size;
+    }
     for (const r of Object.keys(ROLE_TRAITS))
       result[r] = new Set(roster.filter(u => TYPES[u.type].role === r).map(u => u.type)).size;
     return result;
@@ -984,11 +1339,22 @@
       t = traits(roster),
       i = ITEMS[u.item] || {},
       star = statScale(u.star);
+    // Each trait contributes the values of the highest tier it reaches; an inactive trait is an
+    // empty object, so every read below is the same shape whether or not the trait is on.
+    const forest = tierOf('forest', t),
+      astral = tierOf('astral', t),
+      tide = tierOf('tide', t),
+      ember = tierOf('ember', t),
+      moon = tierOf('moon', t),
+      wall = tierOf('guardian', t),
+      wind = tierOf('ranger', t),
+      echo = tierOf('mage', t),
+      chorus = tierOf('support', t),
+      night = tierOf('assassin', t);
+    // Role traits reward the companions that carry them; faction traits reach the whole party.
+    const mine = role => (d.role === role ? 1 : 0);
     const hp = Math.round(
-      d.hp *
-        star *
-        scale *
-        (1 + (t.forest >= 3 ? 0.28 : t.forest >= 2 ? 0.18 : 0) + relicValue(relics, 'vigor', 'hp') + (i.hp || 0)),
+      d.hp * star * scale * (1 + (forest.hp || 0) + relicValue(relics, 'vigor', 'hp') + (i.hp || 0)),
     );
     return {
       maxHp: hp,
@@ -997,41 +1363,53 @@
           star *
           scale *
           (1 +
-            (t.ember >= 3 ? 0.14 : t.ember >= 2 ? 0.08 : 0) +
+            (ember.atk || 0) +
             relicValue(relics, 'edge', 'atk') +
             relicValue(relics, 'bloodpact', 'atk') +
             (i.atk || 0)),
       ),
-      armor: d.armor + (t.guardian >= 2 ? 8 : 0) + (i.armor || 0),
+      armor: d.armor + (wall.armor || 0) + (i.armor || 0),
       range: d.range,
       interval:
         d.interval /
         (1 +
-          (t.ember >= 3 ? 0.08 : 0) +
+          (ember.haste || 0) +
           relicValue(relics, 'tempo', 'haste') +
           (i.haste || 0) +
-          (d.role === 'ranger' && t.ranger >= 2 ? 0.18 : 0)),
+          mine('ranger') * (wind.haste || 0)),
       moveInterval: 0.36 / (1 + (i.move || 0)),
-      power: 1 + (t.astral >= 3 ? 0.35 : t.astral >= 2 ? 0.2 : 0) + (i.power || 0),
-      mana: Math.min(MAX_MANA, d.mana + (t.astral >= 3 ? 15 : 0) + relicValue(relics, 'spark', 'mana') + (i.mana || 0)),
-      manaRegen: 3 + (t.mage >= 2 ? 3 : 0),
-      regen: t.forest >= 3 ? 0.008 : 0,
-      crit: Math.min(
-        0.9,
-        (t.moon >= 3 ? 0.3 : t.moon >= 2 ? 0.15 : 0) +
-          (d.role === 'assassin' && t.assassin >= 2 ? 0.15 : 0) +
-          (i.crit || 0),
+      power: 1 + (astral.power || 0) + (echo.power || 0) + (i.power || 0),
+      mana: Math.min(
+        MAX_MANA,
+        d.mana +
+          (astral.mana || 0) +
+          mine('support') * (chorus.mana || 0) +
+          relicValue(relics, 'spark', 'mana') +
+          (i.mana || 0),
       ),
-      critPower: (t.moon >= 3 ? 1.75 : 1.5) + (i.critPower || 0),
-      healing: 1 + (t.tide >= 3 ? 0.2 : 0) + (d.role === 'support' && t.support >= 2 ? 0.2 : 0) + (i.healing || 0),
+      manaRegen: 3 + (echo.manaRegen || 0) + (astral.manaRegen || 0),
+      regen: (forest.regen || 0) + mine('guardian') * (wall.regen || 0),
+      crit: Math.min(0.9, (moon.crit || 0) + mine('assassin') * (night.crit || 0) + (i.crit || 0)),
+      critPower: 1.5 + (moon.critPower || 0) + mine('assassin') * (night.critPower || 0) + (i.critPower || 0),
+      healing: 1 + (tide.healing || 0) + mine('support') * (chorus.healing || 0) + (i.healing || 0),
       leech: i.leech || 0,
       thorns: relicValue(relics, 'thorns', 'reflect'),
-      startShield: relicValue(relics, 'shelter', 'shield') + (t.tide >= 3 ? 45 : t.tide >= 2 ? 25 : 0),
+      startShield: relicValue(relics, 'shelter', 'shield') + (tide.shield || 0),
+      shieldTime: tide.shieldTime || 0,
+      splash: ember.splash || 0,
+      spellCrit: Math.min(1, Math.max(moon.spellCrit || 0, relicValue(relics, 'prism', 'share'))),
+      trueShot: mine('ranger') * (wind.trueShot || 0),
+      resist: Math.min(0.6, i.resist || 0),
+      ramp: i.ramp || 0,
+      mark: i.mark || 0,
+      markBonus: relicValue(relics, 'beacon', 'amp'),
+      markExtend: relicValue(relics, 'beacon', 'extend'),
+      execute: relicValue(relics, 'hunt', 'bonus'),
       shieldMana: relicValue(relics, 'wardflow', 'mana'),
       critHeal: relicValue(relics, 'moonwell', 'ratio'),
       castWard: relicValue(relics, 'chorus', 'shield'),
       overflow: relicValue(relics, 'overflow', 'share'),
-      castMana: i.castMana || 0,
+      castMana: (i.castMana || 0) + mine('support') * (chorus.castMana || 0),
       emergencyShield: i.emergencyShield || 0,
     };
   }
@@ -1134,7 +1512,7 @@
     return {};
   }
   function expandCost(s) {
-    return [0, 0, 0, 4, 6, 8][s.capacity] || 0;
+    return [0, 0, 0, 4, 6, 8, 11][s.capacity] || 0;
   }
   function expand(s) {
     if (!canManage(s)) return { error: '准备阶段才能扩充人口' };
@@ -1164,10 +1542,18 @@
     while (s.units.length - chosen.length > BENCH) add(ranked.find(u => !chosen.includes(u)));
     s.units.forEach(u => (u.pos = null));
     let front = 0,
-      back = 0;
+      back = 0,
+      mid = 0;
+    // The middle row absorbs the overflow once a side is full, so a seven-strong party still
+    // lands somewhere legal however melee-heavy or ranged-heavy it is.
     const frontSlots = [20, 21, 19, 22, 18, 23],
+      midSlots = [26, 27, 25, 28, 24, 29],
       backSlots = [32, 33, 31, 34, 30, 35];
-    chosen.forEach(u => (u.pos = TYPES[u.type].range === 1 ? frontSlots[front++] : backSlots[back++]));
+    chosen.forEach(u => {
+      const melee = TYPES[u.type].range === 1;
+      if (melee) u.pos = front < frontSlots.length ? frontSlots[front++] : midSlots[mid++];
+      else u.pos = back < backSlots.length ? backSlots[back++] : midSlots[mid++];
+    });
     return {};
   }
   const currentNode = s => s.map.find(n => n.id === s.nodeId);
@@ -1232,6 +1618,13 @@
           break;
         case 'lastwood':
           st.startShield += 60;
+          break;
+        case 'resonant':
+          st.spellCrit = Math.max(st.spellCrit, 0.5);
+          st.crit = Math.max(st.crit, 0.2);
+          break;
+        case 'brand':
+          st.mark = Math.max(st.mark, 0.18);
           break;
       }
     }
@@ -1308,6 +1701,16 @@
           dead: false,
           critCount: 0,
           baseInterval: st.interval,
+          baseAtk: st.atk,
+          rampStacks: 0,
+          markAmp: 0,
+          markUntil: 0,
+          weaken: 0,
+          weakenUntil: 0,
+          reflect: 0,
+          reflectUntil: 0,
+          hasteBuff: 0,
+          hasteUntil: 0,
         });
       }
     for (const u of b.units.filter(u => TYPES[u.type].role === 'assassin')) {
@@ -1356,10 +1759,30 @@
       }
     }
   }
-  function hurt(b, source, target, raw, kind = 'physical', isBasic = false, critical = false) {
+  // A mark makes its bearer take more damage from every source, which is why the amount and the
+  // window are stored on the target rather than on whoever applied them.
+  function applyMark(b, source, target, amp, duration) {
+    if (target.dead) return;
+    const total = amp + (source.markBonus || 0),
+      until = b.time + duration + (source.markExtend || 0);
+    target.markAmp = target.markUntil > b.time ? Math.max(target.markAmp, total) : total;
+    target.markUntil = Math.max(target.markUntil || 0, until);
+    b.events.push({ type: 'mark', id: target.id, pos: target.pos, value: total, from: source.pos });
+  }
+  // `chain` marks damage that is itself a reaction — reflected or splashed — so a barrier and a
+  // thorns crown facing each other settle instead of bouncing damage back and forth forever.
+  function hurt(b, source, target, raw, kind = 'physical', isBasic = false, critical = false, chain = false) {
     if (target.dead) return 0;
-    const mitigation = kind === 'true' ? 1 : 100 / (100 + target.armor * (kind === 'magic' ? 0.45 : 1));
+    if (source.weakenUntil > b.time) raw *= 1 - source.weaken;
+    if (target.markUntil > b.time) raw *= 1 + target.markAmp;
+    if (source.execute && target.hp <= target.maxHp * RELIC_VALUES.hunt.threshold) raw *= 1 + source.execute;
+    const mitigation =
+      kind === 'true'
+        ? 1
+        : (100 / (100 + target.armor * (kind === 'magic' ? 0.45 : 1))) *
+          (kind === 'magic' ? 1 - (target.resist || 0) : 1);
     let value = Math.max(1, Math.round(raw * mitigation));
+    const shielded = target.shield > 0;
     const absorbed = Math.min(target.shield, value);
     consumeShield(target, absorbed);
     target.blocked += absorbed;
@@ -1401,8 +1824,14 @@
       proc(b, target, '余烬木心');
     }
     if (source.leech && value) heal(b, source, source, value * source.leech);
-    if (isBasic && target.thorns && !source.dead && value) {
-      hurt(b, target, source, value * target.thorns, 'true');
+    if (!chain && !isBasic && source.mark && source.side !== target.side)
+      applyMark(b, source, target, source.mark, MARK_SECONDS);
+    // A barrier answers everything it soaks, absorbed damage included, and falls silent once the
+    // shield it is made of is gone.
+    if (!chain && shielded && target.reflectUntil > b.time && !source.dead && value + absorbed > 0)
+      hurt(b, target, source, (value + absorbed) * target.reflect, 'true', false, false, true);
+    if (!chain && isBasic && target.thorns && !source.dead && value) {
+      hurt(b, target, source, value * target.thorns, 'true', false, false, true);
     }
     if (isBasic && critical && source.critHeal && !source.dead) {
       const friend = alive(b, source.side).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
@@ -1411,7 +1840,7 @@
     }
     return value;
   }
-  function shield(b, source, target, value, duration = SHIELD_SECONDS) {
+  function shield(b, source, target, value, duration = SHIELD_SECONDS + (target.shieldTime || 0)) {
     if (target.dead) return;
     const added = Math.round(value);
     target.shield += added;
@@ -1424,12 +1853,23 @@
     if (target.stealthUntil > b.time) return;
     u.mana = 0;
     u.casts++;
-    const power = u.power,
+    // 月影四层与棱光石让技能也能暴击: the roll multiplies the whole skill, so a critical shield
+    // or heal is as real as a critical hit.
+    const spellCrit = u.spellCrit > 0 && random(b) < u.crit * u.spellCrit;
+    const power = u.power * (spellCrit ? u.critPower : 1),
       atk = u.atk;
     const sp = SKILLS[u.type].params;
     const foes = alive(b, 1 - u.side),
       friends = alive(b, u.side);
-    b.events.push({ type: 'cast', id: u.id, pos: u.pos, name: TYPES[u.type].skill, unitType: u.type, to: target.pos });
+    b.events.push({
+      type: 'cast',
+      id: u.id,
+      pos: u.pos,
+      name: TYPES[u.type].skill,
+      unitType: u.type,
+      to: target.pos,
+      critical: spellCrit,
+    });
     switch (u.type) {
       case 'guard':
         shield(b, u, u, (sp.flat + atk * sp.ratio) * power);
@@ -1597,6 +2037,70 @@
         hurt(b, u, target, atk * sp.ratio * power);
         target.stun = Math.max(target.stun, b.time + sp.stun);
         break;
+      case 'driftbow':
+        foes
+          .filter(v => v.pos % COLS === target.pos % COLS)
+          .forEach(v => {
+            b.events.push({ type: 'volley', from: u.pos, to: v.pos, unitType: u.type, delay: 0 });
+            hurt(b, u, v, atk * sp.ratio * power);
+          });
+        break;
+      case 'stargazer': {
+        const victim =
+          foes
+            .filter(v => !(v.stealthUntil > b.time))
+            .sort((a, b) => distance(u.pos, b.pos) - distance(u.pos, a.pos))[0] || target;
+        u.targetId = victim.id;
+        u.targetReason = 'skill';
+        b.events.push({ type: 'volley', from: u.pos, to: victim.pos, unitType: u.type, delay: 0 });
+        hurt(b, u, victim, atk * sp.ratio * power);
+        applyMark(b, u, victim, sp.mark, sp.duration);
+        break;
+      }
+      case 'emberdrum':
+        friends
+          .sort((a, b) => b.atk - a.atk)
+          .slice(0, sp.targets)
+          .forEach(v => {
+            v.hasteBuff = Math.max(v.hasteBuff || 0, sp.haste);
+            v.hasteUntil = Math.max(v.hasteUntil || 0, b.time + sp.duration);
+            heal(b, u, v, (sp.flat + atk * sp.healRatio) * power);
+            proc(b, v, TYPES[u.type].skill);
+          });
+        break;
+      case 'vineclaw':
+        hurt(b, u, target, atk * (target.hp <= target.maxHp * sp.threshold ? sp.executeRatio : sp.ratio) * power);
+        break;
+      case 'nightdew':
+        shield(b, u, u, (sp.flat + atk * sp.ratio) * power);
+        u.taunt = b.time + sp.taunt;
+        u.reflect = sp.reflect;
+        u.reflectUntil = b.time + SHIELD_SECONDS + (u.shieldTime || 0);
+        break;
+      case 'saltforge':
+        friends
+          .sort((a, b) => a.shield - b.shield || a.hp / a.maxHp - b.hp / b.maxHp)
+          .slice(0, sp.targets)
+          .forEach(v => shield(b, u, v, (sp.flat + atk * sp.ratio) * power));
+        break;
+      case 'mistcaller':
+        foes
+          .filter(v => distance(v.pos, target.pos) <= sp.radius)
+          .forEach(v => {
+            hurt(b, u, v, atk * sp.ratio * power, 'magic');
+            v.slow = Math.max(v.slow, b.time + sp.slow);
+            v.weaken = Math.max(v.weaken || 0, sp.weaken);
+            v.weakenUntil = Math.max(v.weakenUntil || 0, b.time + sp.duration);
+          });
+        break;
+      case 'prismguard':
+        shield(b, u, u, (sp.flat + atk * sp.ratio) * power);
+        friends
+          .filter(v => v !== u)
+          .sort((a, b) => distance(u.pos, a.pos) - distance(u.pos, b.pos))
+          .slice(0, sp.targets)
+          .forEach(v => (v.mana = Math.min(MAX_MANA, v.mana + sp.mana * power)));
+        break;
       case 'ancient':
         foes.forEach(v => hurt(b, u, v, atk * sp.ratio * power, 'magic'));
         break;
@@ -1640,6 +2144,7 @@
       }
       if (b.enrage && !u.overtime) {
         u.overtime = true;
+        u.baseAtk = Math.round(u.baseAtk * 1.6);
         u.atk = Math.round(u.atk * 1.6);
         u.healing *= 0.5;
         u.regen = 0;
@@ -1706,16 +2211,28 @@
         continue;
       }
       if (u.attackCd > 0) continue;
+      // A drum beat shortens the wait between swings without touching the companion's own speed,
+      // so the buff can expire and leave the unit exactly as it was.
+      const tempo = u.interval / (u.hasteUntil > b.time ? 1 + u.hasteBuff : 1);
       if (u.mana >= 100) {
         cast(b, u, target);
-        u.attackCd = u.interval * 0.8;
+        u.attackCd = tempo * 0.8;
       } else {
         const critical = random(b) < u.crit;
         const raw = u.atk * (0.96 + random(b) * 0.08) * (critical ? u.critPower : 1);
         b.events.push({ type: 'attack', id: u.id, from: u.pos, to: target.pos, unitType: u.type, ranged: u.range > 1 });
         hurt(b, u, target, raw, 'physical', true, critical);
+        if (u.trueShot && !target.dead) hurt(b, u, target, u.atk * u.trueShot, 'true', false, false, true);
+        if (u.splash)
+          alive(b, 1 - u.side)
+            .filter(v => v !== target && distance(v.pos, target.pos) <= 1)
+            .forEach(v => hurt(b, u, v, u.atk * u.splash, 'magic', false, false, true));
+        if (u.ramp && u.rampStacks < RAMP_STACKS) {
+          u.rampStacks++;
+          u.atk = Math.round(u.baseAtk * (1 + u.ramp * u.rampStacks));
+        }
         u.mana = Math.min(MAX_MANA, u.mana + 21);
-        u.attackCd = u.interval * (u.slow > b.time ? 1.4 : 1);
+        u.attackCd = tempo * (u.slow > b.time ? 1.4 : 1);
         if (critical) u.critCount++;
       }
     }
@@ -1959,7 +2476,15 @@
           discount = relicValue(s.relics, 'bargain', 'discount');
         const missing = builds.find(b => b.owned && !b.ready),
           gearHint = missing
-            ? { ward: 'heartwood', crit: 'moonlens', cast: 'channel', heal: 'fang' }[missing.id]
+            ? {
+                ward: 'heartwood',
+                crit: 'moonlens',
+                cast: 'channel',
+                heal: 'fang',
+                spell: 'moonlens',
+                execute: 'warhorn',
+                mark: 'catalyst',
+              }[missing.id]
             : deployed(s).some(u => TYPES[u.type].role === 'support')
               ? 'charm'
               : deployed(s).some(u => TYPES[u.type].role === 'mage')
@@ -1977,12 +2502,31 @@
             rng,
           ),
           relic = core ? 'relic:' + core.relic : lootFor(s, 'relic');
+        // The emblem on sale is the one that finishes a tier soonest, so a merchant is a way to
+        // steer a composition instead of waiting for the tavern to offer the right companion.
+        const counts = traits(deployed(s));
+        const wanted = Object.keys(FACTION_DEFS)
+          .map(id => {
+            const held = counts[id] || 0,
+              next = FACTION_DEFS[id].thresholds.find(x => x > held);
+            return { id, held, gap: next ? next - held : 99 };
+          })
+          .filter(x => x.held >= 1 && x.gap < 99)
+          .sort((a, b) => a.gap - b.gap || b.held - a.held)[0];
+        const emblem = wanted ? wanted.id : choose(Object.keys(FACTION_DEFS), rng);
         s.merchant = [
           ...gear.map((id, i) => ({
             key: 'item:' + id,
             price: 7 + node.act,
             ...(!i ? { hint: missing ? '补足「' + missing.name + '」的装备' : '适合队伍的配装' } : {}),
           })),
+          {
+            key: 'item:emblem_' + emblem,
+            price: 10 + node.act * 2,
+            hint: wanted
+              ? `再 ${cn(wanted.gap)} 种${FACTIONS[emblem].name}即可进阶`
+              : `为一位伙伴额外接上${FACTIONS[emblem].name}`,
+          },
           { key: relic, price: 13 + node.act * 2, ...(core ? { hint: '开启「' + core.name + '」的核心' } : {}) },
           { key: 'heal:18', price: 7 },
         ].map((o, i) => ({
@@ -2260,7 +2804,7 @@
       has(ORIGINS, r.origin) &&
       has(DIFFICULTIES, r.difficulty) &&
       has(CHALLENGES, r.challenge) &&
-      [RULESET, LEGACY_RULESET].includes(r.rules) &&
+      [RULESET, ...PRIOR_RULESETS].includes(r.rules) &&
       typeof r.won === 'boolean' &&
       n(r.completed, 0, 27) &&
       n(r.life, 0, 100) &&
@@ -2294,13 +2838,13 @@
       !integer(s.stage, 0, LAST_STAGE) ||
       !integer(s.life, 0, 100) ||
       !integer(s.gold, 0, 99999) ||
-      !integer(s.capacity, 3, 6) ||
+      !integer(s.capacity, 3, 7) ||
       !integer(s.rng, 1, 4294967295) ||
       !integer(s.seed, 1, 4294967295) ||
       !integer(s.nextId, 1, 999999)
     )
       return false;
-    if (s.ruleset !== undefined && ![RULESET, LEGACY_RULESET].includes(s.ruleset)) return false;
+    if (s.ruleset !== undefined && ![RULESET, ...PRIOR_RULESETS].includes(s.ruleset)) return false;
     if (
       (s.challenge !== undefined && !has(CHALLENGES, s.challenge)) ||
       s.capacity > maxCapacity(s) ||
@@ -2352,7 +2896,7 @@
           integer(n.formation, 0, 2) &&
           Array.isArray(n.types) &&
           n.types.length >= 2 &&
-          n.types.length <= 6 &&
+          n.types.length <= 7 &&
           n.types.every(t => has(TYPES, t)) &&
           Array.isArray(n.stars) &&
           n.stars.length === n.types.length &&
@@ -2388,7 +2932,7 @@
       return false;
     if (
       !Array.isArray(s.units) ||
-      s.units.length > 14 ||
+      s.units.length > BENCH + 7 ||
       !s.units.every(
         u =>
           u &&
@@ -2473,7 +3017,7 @@
         !finite(b.time, 0, 80) ||
         !integer(b.tick, 0, 800) ||
         !integer(b.rng, 1, 4294967295) ||
-        b.units.length > 12 ||
+        b.units.length > 14 ||
         b.units.length < 2
       )
         return false;
@@ -2530,6 +3074,25 @@
       )
         return false;
       if (!b.units.every(u => u.wither === undefined || finite(u.wither, 0, 85))) return false;
+      // Marks, weakening, barriers and drum beats are all stored on the unit, so a tampered save
+      // must not be able to smuggle a permanent or infinite one back into a resumed battle.
+      if (
+        !b.units.every(u =>
+          [
+            ['markAmp', 0, 10],
+            ['markUntil', 0, 95],
+            ['weaken', 0, 1],
+            ['weakenUntil', 0, 95],
+            ['reflect', 0, 5],
+            ['reflectUntil', 0, 95],
+            ['hasteBuff', 0, 5],
+            ['hasteUntil', 0, 95],
+            ['rampStacks', 0, RAMP_STACKS],
+            ['baseAtk', 0, 1e6],
+          ].every(([key, min, max]) => u[key] === undefined || finite(u[key], min, max)),
+        )
+      )
+        return false;
       if (b.mechanicsVersion !== undefined && b.mechanicsVersion !== 1) return false;
       if (
         !b.units.every(
@@ -2555,7 +3118,7 @@
       if (b.telemetryVersion !== undefined && b.telemetryVersion !== 1) return false;
       if (
         b.telemetryVersion === 1 &&
-        (!integer(b.startCapacity, 3, 6) ||
+        (!integer(b.startCapacity, 3, 7) ||
           !b.units.every(
             u =>
               finite(u.taken) &&
@@ -2594,7 +3157,7 @@
         !finite(r.time, 0, 80) ||
         !integer(r.income, 0, 9999) ||
         !integer(r.loss, 0, 100) ||
-        !integer(r.casualties, 0, 6) ||
+        !integer(r.casualties, 0, 7) ||
         (r.loot !== null && !validLoot(r.loot)) ||
         !r.detail ||
         !['base', 'interest', 'streak', 'path', 'relic'].every(k => finite(r.detail[k], 0, 999)) ||
@@ -2616,7 +3179,7 @@
     if (s.report?.telemetryVersion === 1) {
       const r = s.report;
       if (
-        !integer(r.startCapacity, 3, 6) ||
+        !integer(r.startCapacity, 3, 7) ||
         !r.units.every(
           u =>
             finite(u.taken) &&
@@ -2665,6 +3228,11 @@
     ROLE_TRAITS,
     ITEMS,
     BASIC_ITEMS,
+    EMBLEM_ITEMS,
+    TRAIT_DEFS,
+    tierIndex,
+    MARK_SECONDS,
+    RAMP_STACKS,
     RELICS,
     RELIC_DEFS,
     RELIC_VALUES,
@@ -2711,6 +3279,7 @@
     alive,
     heal,
     hurt,
+    applyMark,
     cast,
     step,
     interest,

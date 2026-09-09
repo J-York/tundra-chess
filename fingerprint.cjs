@@ -12,11 +12,13 @@ function battles() {
   const types = Object.keys(E.TYPES).filter(t => E.TYPES[t].cost > 0);
   for (let seed = 1; seed <= 40; seed++) {
     const s = E.newRun({ seed: (seed * 7919) % 4294967295 || 1 });
-    s.capacity = 6;
-    s.units = Array.from({ length: 6 }, (_, i) => {
+    s.capacity = 7;
+    s.units = Array.from({ length: 7 }, (_, i) => {
       const u = E.unit(s, types[(seed * 3 + i * 5) % types.length], 18 + i);
       u.star = 1 + ((seed + i) % 3);
-      u.item = E.BASIC_ITEMS[(seed + i) % E.BASIC_ITEMS.length];
+      // Emblems belong in the fingerprint too: they change which traits a party actually has.
+      const gear = [...E.BASIC_ITEMS, ...E.EMBLEM_ITEMS];
+      u.item = gear[(seed + i) % gear.length];
       return u;
     });
     s.relics = [Object.keys(E.RELICS)[seed % Object.keys(E.RELICS).length]];

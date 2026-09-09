@@ -34,7 +34,18 @@ function manage(s, style) {
       const traits = E.traits(party);
       let score = party.reduce((v, u) => {
         const st = E.stats(u, party, s.relics);
-        return v + st.maxHp * 0.1 + (st.atk / st.interval) * 2 + (E.TYPES[u.type].role === 'support' ? 15 : 0);
+        // Survivability is part of a composition's value: a bot that counts only life and damage
+        // per second scores shields, armour and healing at zero and reports protective factions
+        // as weak when it is the measurement that is blind.
+        return (
+          v +
+          st.maxHp * 0.1 +
+          (st.atk / st.interval) * 2 +
+          st.armor * 0.5 +
+          st.startShield * 0.5 +
+          (st.healing - 1) * 25 +
+          (E.TYPES[u.type].role === 'support' ? 15 : 0)
+        );
       }, 0);
       if (!party.some(u => E.TYPES[u.type].role === 'guardian')) score *= 0.8;
       if (traits[style] >= 3) score *= 1.1;
@@ -54,30 +65,44 @@ function manage(s, style) {
     b = 0;
   const spread = E.enemyRoster(s).filter(u => ['mage', 'frost'].includes(u.type)).length >= 2;
   const fronts = spread ? [18, 23, 20, 22, 19, 21] : [20, 21, 19, 22, 18, 23],
-    backs = spread ? [30, 35, 32, 34, 31, 33] : [32, 33, 31, 34, 30, 35];
-  for (const u of best) E.move(s, u.id, E.TYPES[u.type].range === 1 ? fronts[f++] : backs[b++]);
+    backs = spread ? [30, 35, 32, 34, 31, 33] : [32, 33, 31, 34, 30, 35],
+    mids = [26, 27, 25, 28, 24, 29];
+  let m = 0;
+  // A seven-strong party overflows into the middle row instead of leaving someone on the bench.
+  for (const u of best) {
+    const melee = E.TYPES[u.type].range === 1,
+      lane = melee ? fronts[f++] : backs[b++];
+    E.move(s, u.id, lane === undefined ? mids[m++] : lane);
+  }
   // Equip appropriate roles, using the normal equip action.
   for (let i = s.bag.length - 1; i >= 0; i--) {
     const item = s.bag[i].replace('_plus', '');
+    const faction = E.ITEMS[s.bag[i]].faction;
     const ordered = [...best].sort((a, b) => {
+      // An emblem is worth exactly what it adds to a trait, so it goes to a companion who is not
+      // already counted in that faction; everything else follows the role it was made for.
       const value = u =>
         E.statScale(u.star) *
-        (item === 'buckler'
-          ? E.TYPES[u.type].role === 'guardian'
-            ? 4
-            : 1
-          : item === 'wand'
-            ? ['mage', 'support'].includes(E.TYPES[u.type].role)
+        (faction
+          ? E.hasFaction(u.type, faction)
+            ? 0
+            : 5
+          : item === 'buckler' || item === 'mantle'
+            ? E.TYPES[u.type].role === 'guardian'
               ? 4
               : 1
-            : item === 'charm'
-              ? E.TYPES[u.type].role === 'support'
+            : item === 'wand' || item === 'catalyst'
+              ? ['mage', 'support'].includes(E.TYPES[u.type].role)
                 ? 4
                 : 1
-              : E.TYPES[u.type].atk / 15);
+              : item === 'charm'
+                ? E.TYPES[u.type].role === 'support'
+                  ? 4
+                  : 1
+                : E.TYPES[u.type].atk / 15);
       return value(b) - value(a);
     });
-    const target = ordered.find(u => !u.item);
+    const target = ordered.find(u => !u.item && (!faction || !E.hasFaction(u.type, faction)));
     if (target) E.equip(s, target.id, i);
   }
 }

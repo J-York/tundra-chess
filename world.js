@@ -20,67 +20,87 @@
     thorns: { name: '荆棘王冠', desc: '敌方反弹普攻造成的生命伤害的 25%。用技能突破。' },
     convergence: { name: '星泉共振', desc: '敌方初始法力 +25，每秒额外恢复 2 法力。优先突破法术后排。' },
     lastwood: { name: '古树庇护', desc: '敌方获得 60 点开场护盾；古树半血狂怒。兼顾输出与生存。' },
+    resonant: { name: '回响之地', desc: '敌方技能可以暴击，暴击率为普攻的一半。压低施法次数，或抢先击破法术后排。' },
+    brand: {
+      name: '灼印',
+      desc: '敌方技能命中会标记目标 4 秒，被标记者受到的伤害提高 18%。轮换承伤，避免一人被持续集火。',
+    },
   };
   const ENCOUNTERS = {
     estuary: {
       name: '浅滩守望',
-      types: ['tideguard', 'wavecaller', 'pearl', 'songbird', 'ranger', 'knight'],
-      tip: '潮汐提供开场护盾。分散到不同横排，减少横潮命中人数。',
+      types: ['tideguard', 'wavecaller', 'pearl', 'songbird', 'ranger', 'knight', 'driftbow'],
+      tip: '潮汐提供开场护盾。分散到不同横排减少横潮命中，也别把远程挤在同一列上给贯穿箭。',
     },
     furnace: {
       name: '炉火行军',
-      types: ['emberguard', 'flarebow', 'cinder', 'sparkscout', 'guard', 'healer'],
-      tip: '余烬增强攻击；聚火擅长单点突破。让坚固前排承伤，避免只靠一位守卫。',
+      types: ['emberguard', 'flarebow', 'cinder', 'sparkscout', 'guard', 'healer', 'emberdrum'],
+      tip: '余烬增强攻击，战鼓还会临时提高攻速。让坚固前排承伤，先打断鼓手的节奏。',
     },
     wanderers: {
       name: '溪月旅团',
-      types: ['oakmaul', 'duskblade', 'songbird', 'frost', 'tideguard', 'ranger'],
-      tip: '橡角近身横扫、暮刃自疗；用远程输出和凋零压低续航，保护后排。',
+      types: ['oakmaul', 'duskblade', 'songbird', 'frost', 'tideguard', 'ranger', 'vineclaw'],
+      tip: '橡角近身横扫、暮刃自疗，猎豹专挑残血。保持血线，别让伙伴停在斩杀线附近。',
     },
     crossroads: {
       name: '星火同盟',
-      types: ['knight', 'sparkscout', 'pearl', 'mage', 'flarebow', 'warden'],
-      tip: '跨阵营伙伴串起护盾、法术与普攻。准备控制并照顾后排，避免被斥候切断施法。',
+      types: ['knight', 'sparkscout', 'pearl', 'mage', 'flarebow', 'warden', 'stargazer'],
+      tip: '跨阵营伙伴串起护盾、法术与普攻。观星射手会标记最远的人，后排要有治疗照应。',
     },
     patrol: {
       name: '迷途巡林者',
-      types: ['guard', 'ranger', 'healer', 'guard', 'ranger', 'hunter'],
+      types: ['guard', 'ranger', 'healer', 'guard', 'ranger', 'hunter', 'warden'],
       tip: '前排守卫吸引火力，尽量让输出伙伴安全存活。',
     },
     grove: {
       name: '孢子守望',
-      types: ['guard', 'healer', 'warden', 'ranger', 'healer', 'knight'],
+      types: ['guard', 'healer', 'warden', 'ranger', 'healer', 'knight', 'mistcaller'],
       tip: '治疗和羽幕擅长持久战；凋零可以压制治疗，碎星工匠可以破盾。',
     },
     ambush: {
       name: '月下伏兵',
-      types: ['guard', 'rogue', 'hunter', 'frost', 'rogue', 'ranger'],
-      tip: '刺客会跳入后排。留一名守卫保护远程伙伴。',
+      types: ['guard', 'rogue', 'hunter', 'frost', 'rogue', 'ranger', 'nightdew'],
+      tip: '刺客会跳入后排。留一名守卫保护远程伙伴，夜露的壁垒会反弹伤害。',
     },
     stars: {
       name: '失落观星者',
-      types: ['knight', 'mage', 'oracle', 'breaker', 'mage', 'hunter'],
+      types: ['knight', 'mage', 'oracle', 'breaker', 'mage', 'hunter', 'prismguard'],
       tip: '碎星工匠会击破厚盾；分散站位，搭配治疗应对连锁法术。',
     },
     frost: {
       name: '霜枝巡猎',
-      types: ['guard', 'frost', 'hunter', 'rogue', 'knight', 'frost'],
-      tip: '控制会拖慢施法节奏；药师可以清除眩晕与减速。',
+      types: ['guard', 'frost', 'hunter', 'rogue', 'knight', 'frost', 'mistcaller'],
+      tip: '控制会拖慢施法节奏，迷雾还会削弱伤害；药师可以清除眩晕与减速。',
     },
     bulwark: {
       name: '无声誓卫',
-      types: ['knight', 'guard', 'hunter', 'ranger', 'oracle', 'mage'],
+      types: ['knight', 'guard', 'hunter', 'ranger', 'oracle', 'mage', 'prismguard'],
       tip: '双守卫护甲很高，银狼的真实伤害与法师能打开缺口。',
     },
     chase: {
       name: '逐风猎群',
-      types: ['guard', 'ranger', 'hunter', 'rogue', 'frost', 'knight'],
+      types: ['guard', 'ranger', 'hunter', 'rogue', 'frost', 'knight', 'driftbow'],
       tip: '远程火力密集。用护盾掩护前进，或突袭其侧翼。',
     },
     twilight: {
       name: '暮影双刃',
-      types: ['knight', 'rogue', 'hexer', 'hunter', 'rogue', 'oracle'],
+      types: ['knight', 'rogue', 'hexer', 'hunter', 'rogue', 'oracle', 'nightdew'],
       tip: '两侧后排可能被切入，织咒会压制治疗。羽幕可以保护后排，药师能净化凋零。',
+    },
+    tempest: {
+      name: '逆浪船队',
+      types: ['tideguard', 'driftbow', 'pearl', 'wavecaller', 'saltforge', 'breaker', 'songbird'],
+      tip: '铸师把护盾铺给最薄的人，贯穿箭沿着整列推进。碎盾、真实伤害与错列站位都有用。',
+    },
+    observatory: {
+      name: '星轨观测所',
+      types: ['prismguard', 'mage', 'oracle', 'stargazer', 'breaker', 'knight', 'hexer'],
+      tip: '被标记的伙伴承受更多伤害。先救被标记的人，或抢在星轨箭之前压掉后排。',
+    },
+    mistfen: {
+      name: '雾语沼林',
+      types: ['nightdew', 'mistcaller', 'healer', 'oakmaul', 'hexer', 'vineclaw', 'duskblade'],
+      tip: '迷雾削弱伤害、凋零削弱治疗，猎豹再收残血。净化和爆发技能能打破这个循环。',
     },
   };
   const CHAPTERS = [
@@ -88,7 +108,7 @@
       name: '苔林边境',
       theme: 'forest',
       subtitle: '在旧林里，找到同行的人。',
-      pool: ['patrol', 'grove', 'ambush', 'chase', 'estuary', 'wanderers'],
+      pool: ['patrol', 'grove', 'ambush', 'chase', 'estuary', 'wanderers', 'mistfen'],
       boss: {
         name: '荆棘树王',
         types: ['ancient', 'ranger', 'healer', 'guard'],
@@ -102,12 +122,12 @@
       name: '沉星回廊',
       theme: 'ruin',
       subtitle: '星光之下，每一次停留都有代价。',
-      pool: ['stars', 'bulwark', 'frost', 'grove', 'estuary', 'furnace', 'crossroads'],
+      pool: ['stars', 'bulwark', 'frost', 'grove', 'estuary', 'furnace', 'crossroads', 'observatory', 'tempest'],
       boss: {
         name: '星泉议会',
         types: ['knight', 'mage', 'oracle', 'frost', 'mage', 'hunter'],
         stars: [2, 2, 1, 2, 1, 2],
-        scale: 1.02,
+        scale: 0.95,
         affix: 'convergence',
         tip: '法力支援会让范围法术连续释放。不要挤在一起，尝试从侧翼快速击破法师。',
       },
@@ -116,12 +136,24 @@
       name: '长夜之心',
       theme: 'moon',
       subtitle: '带着一路的选择，走向最后的黎明。',
-      pool: ['twilight', 'stars', 'frost', 'bulwark', 'chase', 'furnace', 'wanderers', 'crossroads'],
+      pool: [
+        'twilight',
+        'stars',
+        'frost',
+        'bulwark',
+        'chase',
+        'furnace',
+        'wanderers',
+        'crossroads',
+        'observatory',
+        'tempest',
+        'mistfen',
+      ],
       boss: {
         name: '永夜守望者',
-        types: ['ancient', 'knight', 'mage', 'healer', 'rogue', 'hunter'],
-        stars: [1, 2, 2, 2, 2, 2],
-        scale: 1.1,
+        types: ['ancient', 'knight', 'mage', 'healer', 'rogue', 'hunter', 'nightdew'],
+        stars: [1, 2, 2, 2, 2, 2, 2],
+        scale: 1.0,
         affix: 'lastwood',
         tip: '前排护盾和后排突袭同时出现。治疗只能争取时间，还需要足够输出在狂怒后结束战斗。',
       },
@@ -210,7 +242,7 @@
                 ? Math.min(kind === 'elite' ? 5 : 4, 2 + Math.floor((floor + 1) / 2))
                 : act === 1
                   ? 4 + Math.floor((floor + 1) / 4)
-                  : 6;
+                  : 6 + (floor >= 6 ? 1 : 0);
           const stars = Array.from({ length: n }, (_, j) =>
             act === 0
               ? floor >= 4 && j === 0
@@ -231,7 +263,7 @@
             kind === 'boss'
               ? boss.affix
               : kind === 'elite' || (act > 0 && random(rng) < 0.45)
-                ? pick(['armored', 'swift', 'charged', 'warded'], rng)
+                ? pick(['armored', 'swift', 'charged', 'warded', 'resonant', 'brand'], rng)
                 : 'none';
           nodes.push({
             id: `${act}-${floor}-${lane}`,
@@ -249,7 +281,7 @@
             scale:
               kind === 'boss'
                 ? boss.scale
-                : (act === 0 ? 0.84 + floor * 0.018 : act === 1 ? 0.98 + floor * 0.017 : 1.09 + floor * 0.018) *
+                : (act === 0 ? 0.81 + floor * 0.017 : act === 1 ? 0.94 + floor * 0.016 : 0.99 + floor * 0.016) *
                   (kind === 'elite' ? 1.13 : 1),
             affix,
             formation: Math.floor(random(rng) * 3),

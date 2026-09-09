@@ -25,6 +25,9 @@ const dump = process.argv.includes('--dump');
 const artDirectory = process.argv.find(arg => arg.startsWith('--art-dir='))?.slice('--art-dir='.length);
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+// Page errors are collected here rather than inside the session, so a run that dies early —
+// a checkpoint that never arrives — can still say what the page complained about.
+const pageErrors = [];
 
 function findChrome() {
   const candidates = [
@@ -58,7 +61,7 @@ async function connect() {
   ).json();
   const ws = new WebSocket(target.webSocketDebuggerUrl);
   const pending = new Map();
-  const consoleErrors = [];
+  const consoleErrors = pageErrors;
   let nextId = 1;
   await new Promise((resolve, reject) => {
     ws.onopen = resolve;
@@ -711,5 +714,6 @@ async function main() {
 
 main().catch(error => {
   console.error(error.message);
+  if (pageErrors.length) console.error('console errors: ' + pageErrors.join(' | '));
   process.exitCode = 1;
 });

@@ -35,15 +35,20 @@
       Object.entries(E.FACTIONS)
         .map(([id, f]) => {
           const n = t[id],
-            tier = n >= 3 ? 1 : 0;
-          return `<button class="synergy ${n >= 2 ? 'active' : ''}" data-trait="${id}" title="${f.desc.join('；')}"><span>${f.icon}</span><span class="syn-copy">${f.name}<small>${n >= 2 ? f.desc[tier] : f.desc[0]}</small></span><b>${n}/${n >= 2 ? 3 : 2}</b></button>`;
+            tier = E.tierIndex(id, n),
+            // The count shown is always measured against the next tier the party can still reach,
+            // so a finished trait reads 4/4 instead of pointing at a threshold that does not exist.
+            goal = f.thresholds.find(x => x > n) ?? f.thresholds.at(-1);
+          return `<button class="synergy ${tier >= 0 ? 'active' : ''} tier-${tier + 1}" data-trait="${id}" title="${f.desc.map((d, i) => f.thresholds[i] + ' 种：' + d).join('；')}"><span>${f.icon}</span><span class="syn-copy">${f.name}<small>${f.desc[Math.max(tier, 0)]}</small></span><b>${n}/${goal}</b></button>`;
         })
         .join('') +
         `<div class="role-traits">${Object.entries(E.ROLE_TRAITS)
-          .map(
-            ([id, r]) =>
-              `<button class="role-pill ${t[id] >= 2 ? 'active' : ''}" data-trait="${id}" title="${r.desc}">${r.icon} ${r.name} ${t[id]}/2</button>`,
-          )
+          .map(([id, r]) => {
+            const n = t[id],
+              tier = E.tierIndex(id, n),
+              goal = r.thresholds.find(x => x > n) ?? r.thresholds.at(-1);
+            return `<button class="role-pill ${tier >= 0 ? 'active' : ''} tier-${tier + 1}" data-trait="${id}" title="${r.desc.map((d, i) => r.thresholds[i] + ' 种：' + d).join('；')}">${r.icon} ${r.name} ${n}/${goal}</button>`;
+          })
           .join('')}</div>`,
     );
     T.text('relic-count', state.relics.length);
@@ -80,7 +85,7 @@
     const expanded = document.querySelector('.expedition').classList.contains('status-open');
     T.text(
       'status-toggle',
-      `${expanded ? '收起详情' : '羁绊与行囊'} · ${Object.keys(E.FACTIONS).filter(f => t[f] >= 2).length} 组羁绊 · ${state.bag.length} 件装备 ${expanded ? '▴' : '▾'}`,
+      `${expanded ? '收起详情' : '羁绊与行囊'} · ${[...Object.keys(E.FACTIONS), ...Object.keys(E.ROLE_TRAITS)].filter(id => E.tierIndex(id, t[id]) >= 0).length} 组羁绊 · ${state.bag.length} 件装备 ${expanded ? '▴' : '▾'}`,
     );
     $('status-toggle').setAttribute('aria-expanded', String(expanded));
   }
@@ -252,20 +257,36 @@
     let area = [];
     if (mode && u.pos !== null) {
       const all = Array.from({ length: 36 }, (_, i) => i);
-      if (['guard', 'knight', 'oakmaul', 'emberguard'].includes(u.type))
-        area = all.filter(p => E.distance(p, u.pos) <= (u.type === 'guard' ? 3 : 1));
+      if (['guard', 'knight', 'oakmaul', 'emberguard', 'nightdew'].includes(u.type))
+        area = all.filter(p => E.distance(p, u.pos) <= (['guard', 'nightdew'].includes(u.type) ? 3 : 1));
       else if (u.type === 'ancient') area = all;
-      else if (['healer', 'oracle', 'warden', 'pearl', 'tideguard', 'songbird'].includes(u.type))
+      else if (
+        [
+          'healer',
+          'oracle',
+          'warden',
+          'pearl',
+          'tideguard',
+          'songbird',
+          'saltforge',
+          'emberdrum',
+          'prismguard',
+        ].includes(u.type)
+      )
         area = T.liveUnits()
           .filter(v => v.side === u.side)
           .map(v => v.pos);
       else if (['rogue', 'breaker'].includes(u.type)) area = foes.map(v => v.pos);
-      else if (u.type === 'hunter') area = foes.slice(-2).map(v => v.pos);
+      else if (['hunter', 'stargazer'].includes(u.type))
+        area = foes.slice(-(u.type === 'hunter' ? 2 : 1)).map(v => v.pos);
       else if (u.type === 'flarebow') area = foes.slice(0, 2).map(v => v.pos);
       else if (u.type === 'wavecaller' && aim !== undefined)
         area = all.filter(p => Math.floor(p / 6) === Math.floor(aim / 6));
+      else if (u.type === 'driftbow' && aim !== undefined) area = all.filter(p => p % 6 === aim % 6);
       else if (aim !== undefined)
-        area = all.filter(p => E.distance(p, aim) <= (['mage', 'frost', 'hexer'].includes(u.type) ? 1 : 0));
+        area = all.filter(
+          p => E.distance(p, aim) <= (['mage', 'frost', 'hexer', 'mistcaller'].includes(u.type) ? 1 : 0),
+        );
     }
     $('board')
       .querySelectorAll('[data-cell]')
@@ -430,7 +451,7 @@
     const value = d.cost * 3 ** (u.star - 1);
     T.paint(
       'unit-panel',
-      `<div class="inspector-title"><span class="tiny muted">${own ? '我方伙伴' : '敌方侦察'}${u.pos === null ? ' · 备战席' : ''}</span><button class="quiet" id="clear-selection" title="取消选择">×</button></div><div class="inspect-art">${art(u.type)}</div><div class="inspect-name">${d.name}</div><div class="inspect-tags">${T.factionName(u.type)} · ${E.ROLES[d.role]}${!own ? ' · 敌方' : ''}</div><div class="inspect-stars">${'★'.repeat(u.star)}</div>${state.phase === 'battle' ? '<div class="live-status" id="live-status"></div>' : ''}<div class="stat-grid"><div><small>生命</small><b>${live && state.phase === 'battle' ? Math.ceil(live.hp) + '/' : ''}${st.maxHp}</b></div><div><small>攻击</small><b>${st.atk}</b></div><div><small>护甲</small><b>${st.armor}</b></div><div><small>攻击间隔</small><b>${st.interval.toFixed(2)}s</b></div><div><small>射程</small><b>${st.range} 格</b></div><div><small>技能强度</small><b>${Math.round(st.power * 100)}%</b></div></div><div class="item-equipped">${u.item ? `${E.ITEMS[u.item].icon} ${E.ITEMS[u.item].name}` : '◇ 尚未装备'}${own && prep ? '<button id="manage-equipment">更换装备</button>' : ''}</div>${state.phase === 'prep' && u.pos !== null ? `<div class="range-controls"><button data-range-mode="attack" class="${ui.rangeMode === 'attack' ? 'active' : ''}">普攻射程</button><button data-range-mode="skill" class="${ui.rangeMode === 'skill' ? 'active' : ''}">技能预览</button></div><p class="range-help">${['mage', 'frost', 'hexer', 'ranger', 'wavecaller', 'cinder', 'duskblade', 'sparkscout'].includes(u.type) ? '点击敌方棋格或敌人选择预览位置；超出金色射程时需先靠近。' : u.type === 'guard' ? '蓝色为嘲讽范围，战斗中影响范围内敌人。' : u.type === 'knight' ? '蓝色为自身与相邻友军的护盾范围。' : ['oakmaul', 'emberguard'].includes(u.type) ? '蓝色为相邻技能范围，需接近敌人后施放。' : ['healer', 'oracle', 'warden', 'pearl', 'tideguard', 'songbird'].includes(u.type) ? '蓝色为可选友军；技能自动按生命或法力选取。' : u.type === 'rogue' ? '蓝色为可能的突袭目标；血量和空位决定实际落点。' : u.type === 'hunter' ? '预览当前最远的两名敌人，目标随站位变化。' : u.type === 'flarebow' ? '预览当前最近的两名敌人，目标随站位变化。' : u.type === 'breaker' ? '蓝色为可选敌人；优先击破最厚护盾，潜伏敌人不能被选中。' : '蓝色为全场技能范围。'}</p>` : ''}<div class="skill-box"><strong>✧ ${d.skill}</strong><p>${d.desc}</p><small>100 法力自动释放 · 普攻 +21，受击 +6 · 初始 ${Math.round(base.mana)} 法力</small><small>${own && u.pos === null ? '预览假设上阵该伙伴后的羁绊；实际上阵人口仍受限制。' : '属性已计入当前羁绊、装备与遗物。'}</small></div>${u.item ? `<p class="equipped-desc">${E.ITEMS[u.item].desc}</p>` : ''}${own ? `<div class="inspect-actions"><button class="secondary" id="bench-unit" ${!prep || u.pos === null ? 'disabled' : ''}>撤至备战席</button><button class="danger" id="sell-unit" ${!prep ? 'disabled' : ''}>出售 ◈ ${value}</button></div>` : ''}<p class="flavor">“${d.flavor}”</p>`,
+      `<div class="inspector-title"><span class="tiny muted">${own ? '我方伙伴' : '敌方侦察'}${u.pos === null ? ' · 备战席' : ''}</span><button class="quiet" id="clear-selection" title="取消选择">×</button></div><div class="inspect-art">${art(u.type)}</div><div class="inspect-name">${d.name}</div><div class="inspect-tags">${T.factionName(u.type)} · ${E.ROLES[d.role]}${!own ? ' · 敌方' : ''}</div><div class="inspect-stars">${'★'.repeat(u.star)}</div>${state.phase === 'battle' ? '<div class="live-status" id="live-status"></div>' : ''}<div class="stat-grid"><div><small>生命</small><b>${live && state.phase === 'battle' ? Math.ceil(live.hp) + '/' : ''}${st.maxHp}</b></div><div><small>攻击</small><b>${st.atk}</b></div><div><small>护甲</small><b>${st.armor}</b></div><div><small>攻击间隔</small><b>${st.interval.toFixed(2)}s</b></div><div><small>射程</small><b>${st.range} 格</b></div><div><small>技能强度</small><b>${Math.round(st.power * 100)}%</b></div></div><div class="item-equipped">${u.item ? `${E.ITEMS[u.item].icon} ${E.ITEMS[u.item].name}` : '◇ 尚未装备'}${own && prep ? '<button id="manage-equipment">更换装备</button>' : ''}</div>${state.phase === 'prep' && u.pos !== null ? `<div class="range-controls"><button data-range-mode="attack" class="${ui.rangeMode === 'attack' ? 'active' : ''}">普攻射程</button><button data-range-mode="skill" class="${ui.rangeMode === 'skill' ? 'active' : ''}">技能预览</button></div><p class="range-help">${['mage', 'frost', 'hexer', 'ranger', 'wavecaller', 'cinder', 'duskblade', 'sparkscout', 'mistcaller', 'vineclaw', 'driftbow'].includes(u.type) ? '点击敌方棋格或敌人选择预览位置；超出金色射程时需先靠近。' : ['guard', 'nightdew'].includes(u.type) ? '蓝色为嘲讽范围，战斗中影响范围内敌人。' : u.type === 'knight' ? '蓝色为自身与相邻友军的护盾范围。' : ['oakmaul', 'emberguard'].includes(u.type) ? '蓝色为相邻技能范围，需接近敌人后施放。' : ['healer', 'oracle', 'warden', 'pearl', 'tideguard', 'songbird', 'saltforge', 'emberdrum', 'prismguard'].includes(u.type) ? '蓝色为可选友军；技能自动按生命、护盾、攻击或距离选取。' : u.type === 'rogue' ? '蓝色为可能的突袭目标；血量和空位决定实际落点。' : u.type === 'hunter' ? '预览当前最远的两名敌人，目标随站位变化。' : u.type === 'stargazer' ? '预览当前最远的一名敌人，标记随站位变化。' : u.type === 'flarebow' ? '预览当前最近的两名敌人，目标随站位变化。' : u.type === 'breaker' ? '蓝色为可选敌人；优先击破最厚护盾，潜伏敌人不能被选中。' : '蓝色为全场技能范围。'}</p>` : ''}<div class="skill-box"><strong>✧ ${d.skill}</strong><p>${d.desc}</p><small>100 法力自动释放 · 普攻 +21，受击 +6 · 初始 ${Math.round(base.mana)} 法力</small><small>${own && u.pos === null ? '预览假设上阵该伙伴后的羁绊；实际上阵人口仍受限制。' : '属性已计入当前羁绊、装备与遗物。'}</small></div>${u.item ? `<p class="equipped-desc">${E.ITEMS[u.item].desc}</p>` : ''}${own ? `<div class="inspect-actions"><button class="secondary" id="bench-unit" ${!prep || u.pos === null ? 'disabled' : ''}>撤至备战席</button><button class="danger" id="sell-unit" ${!prep ? 'disabled' : ''}>出售 ◈ ${value}</button></div>` : ''}<p class="flavor">“${d.flavor}”</p>`,
     );
     renderCombatFocus();
   }

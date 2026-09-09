@@ -449,6 +449,29 @@ header {
   padding: 3px 7px;
   white-space: nowrap;
 }
+/* One glance should say how deep a trait runs: the badge brightens tier by tier. */
+.synergy.tier-1 b {
+  background: #34513a;
+  color: #cfe0a6;
+}
+.synergy.tier-2 b {
+  background: #4a6a3d;
+  color: #e8f0bd;
+}
+.synergy.tier-3 b {
+  background: #7d8a3c;
+  color: #fdf6cd;
+  box-shadow: 0 0 8px #b7c06a55;
+}
+.role-pill.tier-2 {
+  color: #e6eebb;
+  border-color: #7c8f56;
+}
+.role-pill.tier-3 {
+  color: #fdf6cd;
+  background: #4f6236;
+  border-color: #9aa85f;
+}
 .role-traits {
   display: flex;
   gap: 5px;

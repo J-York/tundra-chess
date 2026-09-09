@@ -139,13 +139,16 @@ check('Free refresh, escalating capacity cost and capped interest follow the vis
   assert.equal(s.gold, gold);
   E.refresh(s);
   assert.equal(s.gold, gold - 2);
-  s.gold = 50;
+  s.gold = 61;
   E.expand(s);
-  assert.equal(s.gold, 46);
+  assert.equal(s.gold, 57);
   E.expand(s);
-  assert.equal(s.gold, 40);
+  assert.equal(s.gold, 51);
+  E.expand(s);
+  assert.equal(s.gold, 43);
   E.expand(s);
   assert.equal(s.gold, 32);
+  assert.equal(s.capacity, E.maxCapacity(s));
   assert.ok(E.expand(s).error);
   assert.equal(E.interest(s), 2);
 });
@@ -851,14 +854,20 @@ check('Report advice distinguishes recorded evidence from unavailable older deta
   assert.ok(info.advice.some(a => a.evidence.includes('3.0')));
   assert.equal(E.reportInsights({ units: s.report.units }), null);
 });
-check('Twenty-two companions recruit, merge and leave alternate choices in every faction', () => {
+check('Thirty companions recruit, merge and leave alternate choices in every faction and role', () => {
   const types = Object.keys(E.TYPES).filter(t => E.TYPES[t].cost);
-  assert.equal(types.length, 22);
+  assert.equal(types.length, 30);
   for (const faction of Object.keys(E.FACTIONS)) {
     const options = types.filter(t => E.hasFaction(t, faction));
-    assert.ok(options.length >= 4);
+    // Every faction can reach its own top tier, and still reach the tier below it with any one
+    // member missing from the tavern.
+    assert.ok(options.length >= Math.max(...E.FACTIONS[faction].thresholds));
     for (let omitted = 0; omitted < options.length; omitted++)
-      assert.ok(E.traits(options.filter((_, i) => i !== omitted).map(type => ({ type })))[faction] >= 3);
+      assert.ok(E.traits(options.filter((_, i) => i !== omitted).map(type => ({ type })))[faction] >= 4);
+  }
+  for (const [role, trait] of Object.entries(E.ROLE_TRAITS)) {
+    const options = types.filter(t => E.TYPES[t].role === role);
+    assert.ok(options.length >= Math.max(...trait.thresholds), role + ' must have enough companions for its top tier');
   }
   for (const type of ['warden', 'breaker', 'hexer']) {
     const s = E.newRun();
@@ -869,8 +878,8 @@ check('Twenty-two companions recruit, merge and leave alternate choices in every
     assert.ok(E.validate(s));
   }
   const offered = new Set();
-  for (let seed = 1; seed < 80; seed++) E.rollShop(E.newRun({ seed })).forEach(t => offered.add(t));
-  assert.equal(offered.size, 22);
+  for (let seed = 1; seed < 140; seed++) E.rollShop(E.newRun({ seed })).forEach(t => offered.add(t));
+  assert.equal(offered.size, 30);
   const foes = new Set();
   for (let seed = 1; seed < 20; seed++) E.newRun({ seed }).map.forEach(n => n.types.forEach(t => foes.add(t)));
   for (const t of ['warden', 'breaker', 'hexer']) assert.ok(foes.has(t));
@@ -1352,23 +1361,30 @@ check('Dual factions bridge compositions without double-counting duplicates or b
   assert.equal(Object.keys(E.ROLE_TRAITS).length, 5);
 });
 check('New faction and role bonuses have distinct, bounded effects and feed existing builds', () => {
+  // The numbers come from the trait table itself: tuning a tier stays legal, wiring it to the
+  // wrong stat or to the wrong companions does not.
+  const tide = E.TRAIT_DEFS.tide.tiers,
+    ember = E.TRAIT_DEFS.ember.tiers,
+    wind = E.TRAIT_DEFS.ranger.tiers,
+    song = E.TRAIT_DEFS.support.tiers,
+    night = E.TRAIT_DEFS.assassin.tiers;
   let s = newWith(['tideguard', 'wavecaller', 'guard']);
-  assert.equal(E.stats(s.units[2], s.units).startShield, 25);
+  assert.equal(E.stats(s.units[2], s.units).startShield, tide[0].shield);
   s.units.push(E.unit(s, 'pearl', 25));
-  assert.equal(E.stats(s.units[2], s.units).startShield, 45);
-  assert.equal(E.stats(s.units[2], s.units).healing, 1.2);
+  assert.equal(E.stats(s.units[2], s.units).startShield, tide[1].shield);
+  assert.equal(E.stats(s.units[2], s.units).healing, 1 + tide[1].healing);
   s.relics = ['wardflow'];
   assert.ok(E.buildAdvice(s).find(b => b.id === 'ward').active);
   s = newWith(['cinder', 'flarebow', 'ranger']);
-  assert.equal(E.stats(s.units[2], s.units).atk, Math.round(E.TYPES.ranger.atk * 1.08));
+  assert.equal(E.stats(s.units[2], s.units).atk, Math.round(E.TYPES.ranger.atk * (1 + ember[0].atk)));
   s.units.push(E.unit(s, 'emberguard', 25));
-  assert.equal(E.stats(s.units[2], s.units).atk, Math.round(E.TYPES.ranger.atk * 1.14));
-  assert.equal(E.stats(s.units[2], s.units).interval, E.TYPES.ranger.interval / 1.26);
+  assert.equal(E.stats(s.units[2], s.units).atk, Math.round(E.TYPES.ranger.atk * (1 + ember[1].atk)));
+  assert.equal(E.stats(s.units[2], s.units).interval, E.TYPES.ranger.interval / (1 + ember[1].haste + wind[0].haste));
   s = newWith(['pearl', 'healer', 'guard']);
-  assert.equal(E.stats(s.units[0], s.units).healing, 1.2);
+  assert.equal(E.stats(s.units[0], s.units).healing, 1 + song[0].healing);
   assert.equal(E.stats(s.units[2], s.units).healing, 1);
   s = newWith(['sparkscout', 'duskblade', 'guard']);
-  assert.equal(E.stats(s.units[0], s.units).crit, 0.15);
+  assert.equal(E.stats(s.units[0], s.units).crit, night[0].crit);
   assert.equal(E.stats(s.units[2], s.units).crit, 0);
   s.relics = ['moonwell'];
   assert.ok(E.buildAdvice(s).find(b => b.id === 'crit').active);
@@ -1825,4 +1841,345 @@ check('Every interface module resolves: nothing is called that no module exports
     assert.ok(owner.has(name), 'the public surface must keep exporting ' + name);
 });
 
+check('Faction and role traits pay their tiers in order and stop at the top threshold', () => {
+  const forest = ['guard', 'ranger', 'healer', 'warden', 'oakmaul'];
+  const life = n => {
+    const s = newWith(forest.slice(0, n));
+    return E.stats(s.units[0], s.units).maxHp;
+  };
+  assert.ok(life(1) < life(2) && life(2) < life(3) && life(3) < life(4), 'each forest tier must add life');
+  assert.equal(life(5), life(4), 'a fifth member cannot pay past the last tier');
+  assert.equal(E.tierIndex('forest', 1), -1);
+  assert.equal(E.tierIndex('forest', 4), 2);
+  assert.equal(E.tierIndex('forest', 9), 2);
+  const three = newWith(forest.slice(0, 3)),
+    four = newWith(forest.slice(0, 4));
+  assert.ok(
+    E.stats(four.units[0], four.units).regen > E.stats(three.units[0], three.units).regen,
+    'the top tier must regenerate faster',
+  );
+  // Role traits reach only the companions that carry them, and higher tiers add new effects.
+  const guards = newWith(['guard', 'knight', 'tideguard', 'hunter']);
+  assert.equal(E.stats(guards.units[3], guards.units).regen, 0, 'a hunter gets armour but not guardian regeneration');
+  assert.ok(E.stats(guards.units[0], guards.units).regen > 0);
+  assert.equal(E.stats(guards.units[3], guards.units).armor, E.TYPES.hunter.armor + 16);
+  const rangers = newWith(['ranger', 'hunter', 'flarebow', 'guard']);
+  assert.equal(E.stats(rangers.units[0], rangers.units).trueShot, 0.15);
+  assert.equal(E.stats(rangers.units[3], rangers.units).trueShot, 0, 'the guardian shoots nothing extra');
+  const singers = newWith(['healer', 'oracle', 'pearl', 'emberdrum']);
+  const cast = E.stats(singers.units[0], singers.units);
+  assert.equal(cast.healing, 1.5);
+  assert.ok(cast.castMana >= 15 && cast.mana >= E.TYPES.healer.mana + 30);
+  for (const [id, trait] of Object.entries({ ...E.FACTIONS, ...E.ROLE_TRAITS })) {
+    assert.equal(trait.desc.length, trait.thresholds.length, id + ' must describe every tier it declares');
+    assert.deepEqual(
+      [...trait.thresholds].sort((a, b) => a - b),
+      trait.thresholds,
+      id + ' thresholds must ascend',
+    );
+  }
+});
+check('An emblem grants exactly one extra faction and never counts a duplicate twice', () => {
+  const s = newWith(['guard', 'ranger', 'mage']);
+  assert.equal(E.traits(s.units).astral, 1);
+  s.units[0].item = 'emblem_astral';
+  assert.equal(E.traits(s.units).astral, 2, 'the emblem must complete the second astral type');
+  assert.equal(E.traits(s.units).forest, 2, 'the bearer keeps its own faction');
+  const twins = newWith(['mage', 'mage', 'guard']);
+  twins.units[0].item = 'emblem_forest';
+  twins.units[1].item = 'emblem_forest';
+  assert.equal(E.traits(twins.units).forest, 2, 'two copies of one type still count once');
+  const native = newWith(['guard', 'ranger']);
+  native.units[0].item = 'emblem_forest';
+  assert.equal(E.traits(native.units).forest, 2, 'an emblem for a faction already held adds nothing');
+  // Emblems stay out of the drop tables and out of the forge.
+  for (const id of E.EMBLEM_ITEMS) {
+    assert.ok(E.ITEMS[id] && !E.BASIC_ITEMS.includes(id));
+    assert.equal(E.ITEMS[id + '_plus'], undefined);
+    assert.ok(E.ITEMS[id].desc.includes(E.FACTIONS[E.ITEMS[id].faction].name));
+  }
+  const run = E.newRun({ seed: 4711 });
+  run.bag.push('emblem_tide');
+  assert.ok(E.validate(run));
+  assert.ok(!E.campOptions(run).some(o => o.item.startsWith('emblem_')), 'emblems cannot be refined at camp');
+});
+check('Marks amplify damage, weaken reduces it and both keep only their strongest layer', () => {
+  const s = newWith(['stargazer', 'mistcaller', 'guard']);
+  E.createBattle(s);
+  const b = s.battle,
+    [star, mist] = b.units,
+    foe = b.units.find(u => u.side === 1);
+  foe.armor = 0;
+  foe.shield = 0;
+  foe.hp = foe.maxHp = 9000;
+  const plain = E.hurt(b, star, foe, 100, 'true');
+  E.applyMark(b, star, foe, 0.25, 6);
+  const marked = E.hurt(b, star, foe, 100, 'true');
+  assert.equal(marked, Math.round(plain * 1.25));
+  E.applyMark(b, star, foe, 0.1, 9);
+  assert.equal(foe.markAmp, 0.25, 'a weaker mark cannot overwrite a stronger one');
+  assert.equal(foe.markUntil, b.time + 9, 'but a longer mark still extends the window');
+  b.time = 20;
+  assert.equal(E.hurt(b, star, foe, 100, 'true'), plain, 'an expired mark stops amplifying');
+  // Weakening is stored on the attacker and cuts everything it deals.
+  mist.weaken = 0.2;
+  mist.weakenUntil = b.time + 4;
+  assert.equal(E.hurt(b, mist, foe, 100, 'true'), Math.round(plain * 0.8));
+  const beacon = newWith(['stargazer', 'guard']);
+  beacon.relics = ['beacon'];
+  assert.equal(E.stats(beacon.units[0], beacon.units, beacon.relics).markBonus, E.RELIC_VALUES.beacon.amp);
+  const hunter = newWith(['vineclaw', 'guard']);
+  hunter.relics = ['hunt'];
+  assert.equal(E.stats(hunter.units[0], hunter.units, hunter.relics).execute, E.RELIC_VALUES.hunt.bonus);
+});
+check('Execution bonuses stack with the pounce, and a barrier answers damage without recursion', () => {
+  const s = newWith(['vineclaw', 'guard']);
+  E.createBattle(s);
+  const b = s.battle,
+    cat = b.units[0],
+    foe = b.units.find(u => u.side === 1);
+  foe.armor = 0;
+  foe.shield = 0;
+  foe.maxHp = 10000;
+  foe.hp = 10000;
+  cat.atk = 100;
+  E.cast(b, cat, foe);
+  const healthy = 10000 - foe.hp;
+  foe.hp = 3000;
+  cat.mana = 100;
+  E.cast(b, cat, foe);
+  const wounded = 3000 - foe.hp;
+  assert.ok(wounded > healthy * 1.5, 'a companion below the threshold takes the execution ratio');
+  // Two barriers facing each other settle instead of bouncing damage forever.
+  const duel = newWith(['nightdew', 'guard']);
+  E.createBattle(duel);
+  const d = duel.battle,
+    wall = d.units[0],
+    enemy = d.units.find(u => u.side === 1);
+  E.cast(d, wall, enemy);
+  assert.ok(wall.shield > 0 && wall.reflectUntil > d.time);
+  enemy.reflect = 0.5;
+  enemy.reflectUntil = d.time + 5;
+  enemy.shield = 10;
+  enemy.hp = enemy.maxHp = 5000;
+  const before = enemy.hp;
+  E.hurt(d, enemy, wall, 200, 'physical', true);
+  assert.ok(enemy.hp < before, 'the barrier must return part of what it soaked');
+  wall.shield = 0;
+  const quiet = enemy.hp;
+  E.hurt(d, enemy, wall, 200, 'physical', true);
+  assert.equal(enemy.hp, quiet, 'a barrier without a shield left stops answering');
+  assert.ok(E.validate(duel));
+});
+check('Ember splash, ranger true shots and drum tempo change what a plain attack does', () => {
+  function attackOnce(prepare) {
+    const s = newWith(['guard']);
+    E.createBattle(s);
+    const b = s.battle,
+      ally = b.units[0],
+      foes = b.units.filter(u => u.side === 1);
+    foes.slice(2).forEach(f => (f.dead = true));
+    const [near, neighbour] = foes;
+    ally.pos = 20;
+    near.pos = 14;
+    neighbour.pos = 8;
+    for (const f of [near, neighbour]) {
+      f.stun = 99;
+      f.armor = 0;
+      f.shield = 0;
+      f.hp = f.maxHp = 4000;
+    }
+    ally.attackCd = 0;
+    ally.mana = 0;
+    ally.crit = 0;
+    ally.atk = 100;
+    prepare(ally);
+    E.step(b, 0.1);
+    return { b, ally, near, neighbour };
+  }
+  const plain = attackOnce(() => {});
+  assert.equal(plain.neighbour.hp, plain.neighbour.maxHp, 'an ordinary swing only reaches its target');
+  const splash = attackOnce(a => (a.splash = 0.5));
+  assert.ok(splash.neighbour.hp < splash.neighbour.maxHp, 'the fourth ember tier must splash onto neighbours');
+  assert.ok(splash.neighbour.takenKinds.magic > 0);
+  const shot = attackOnce(a => {
+    a.trueShot = 0.2;
+    a.armor = 0;
+  });
+  assert.ok(shot.near.takenKinds.true > 0, 'the third ranger tier adds true damage to the basic attack');
+  const fast = attackOnce(a => {
+    a.hasteBuff = 0.35;
+    a.hasteUntil = 99;
+  });
+  assert.ok(fast.ally.attackCd < plain.ally.attackCd, 'a drum beat shortens the wait between swings');
+  // The buff belongs to the target of the drum, not to the drummer's own speed.
+  const s = newWith(['emberdrum', 'ranger', 'guard']);
+  E.createBattle(s);
+  const b = s.battle,
+    [drum, ranger] = b.units;
+  E.cast(
+    b,
+    drum,
+    b.units.find(u => u.side === 1),
+  );
+  assert.equal(ranger.hasteBuff, E.SKILLS.emberdrum.params.haste);
+  assert.ok(ranger.hasteUntil > b.time);
+  assert.equal(ranger.interval, E.stats(s.units[1], s.units).interval, 'the companion keeps its own attack interval');
+});
+check('Spell criticals multiply an entire skill and take the stronger of moon and relic', () => {
+  const s = newWith(['cinder', 'guard']);
+  E.createBattle(s);
+  const b = s.battle,
+    mage = b.units[0],
+    foe = b.units.find(u => u.side === 1);
+  foe.armor = 0;
+  foe.shield = 0;
+  foe.hp = foe.maxHp = 20000;
+  mage.spellCrit = 0;
+  E.cast(b, mage, foe);
+  const plain = 20000 - foe.hp;
+  foe.hp = 20000;
+  mage.mana = 100;
+  mage.spellCrit = 1;
+  mage.crit = 1;
+  E.cast(b, mage, foe);
+  assert.equal(20000 - foe.hp, Math.round(plain * mage.critPower), 'a critical skill scales by the crit multiplier');
+  const moon = newWith(['rogue', 'frost', 'hunter', 'hexer']);
+  assert.equal(E.traits(moon.units).moon, 4);
+  assert.equal(E.stats(moon.units[0], moon.units).spellCrit, 0.5, 'the fourth moon tier unlocks spell criticals');
+  const relic = newWith(['guard', 'ranger']);
+  assert.equal(E.stats(relic.units[0], relic.units, ['prism']).spellCrit, E.RELIC_VALUES.prism.share);
+  assert.equal(E.stats(moon.units[0], moon.units, ['prism', 'prism']).spellCrit, 1, 'the share is capped at certain');
+});
+check('The eight new companions each target what their description promises', () => {
+  const s = newWith(['driftbow', 'stargazer', 'saltforge', 'prismguard']);
+  atNode(s, 1, 5, 'battle');
+  E.createBattle(s);
+  const b = s.battle,
+    [bow, star, forge, prism] = b.units,
+    foes = b.units.filter(u => u.side === 1);
+  foes.forEach((f, i) => {
+    f.pos = i;
+    f.armor = 0;
+    f.shield = 0;
+    f.hp = f.maxHp = 4000;
+  });
+  // A pierced column, not a row.
+  foes[0].pos = 2;
+  foes[1].pos = 8;
+  foes[2].pos = 3;
+  E.cast(b, bow, foes[0]);
+  assert.ok(foes[1].hp < foes[1].maxHp, 'the arrow continues down the column');
+  assert.equal(foes[2].hp, foes[2].maxHp, 'the neighbouring column is untouched');
+  // The stargazer picks the farthest enemy and leaves a mark on it.
+  star.pos = 32;
+  const far = foes.reduce((a, f) => (E.distance(star.pos, f.pos) > E.distance(star.pos, a.pos) ? f : a), foes[0]);
+  E.cast(b, star, foes[0]);
+  assert.ok(far.markUntil > b.time, 'the mark lands on the farthest enemy');
+  // The forge shields whoever carries the least protection.
+  const friends = b.units.filter(u => u.side === 0);
+  friends.forEach((f, i) => (f.shield = i * 100));
+  E.cast(b, forge, foes[0]);
+  const thinnest = friends.slice(0, E.SKILLS.saltforge.params.targets);
+  assert.ok(thinnest.every(f => f.shield > 0));
+  // The prism guard shields itself and refills the nearest allies.
+  friends.forEach(f => (f.mana = 0));
+  prism.pos = 20;
+  E.cast(b, prism, foes[0]);
+  assert.ok(prism.shield > 0);
+  assert.equal(
+    friends.filter(f => f !== prism && f.mana > 0).length,
+    E.SKILLS.prismguard.params.targets,
+    'exactly the promised number of allies are refilled',
+  );
+  // Every addition finishes a deterministic battle that also survives a save and resume.
+  for (const type of [
+    'driftbow',
+    'stargazer',
+    'emberdrum',
+    'vineclaw',
+    'nightdew',
+    'saltforge',
+    'mistcaller',
+    'prismguard',
+  ]) {
+    const run = newWith([type, 'guard', 'healer']);
+    E.createBattle(run);
+    for (let i = 0; i < 60; i++) E.step(run.battle);
+    const resumed = E.clone(run);
+    assert.ok(E.validate(resumed), type + ' must produce a valid snapshot');
+    while (!run.battle.result) E.step(run.battle);
+    while (!resumed.battle.result) E.step(resumed.battle);
+    assert.deepEqual(run.battle, resumed.battle, type + ' must resume identically');
+  }
+});
+check('Every affix the map can roll is actually implemented by the rules', () => {
+  const source = require('node:fs').readFileSync(require.resolve('./engine.js'), 'utf8');
+  const body = source.slice(source.indexOf('function unitStats'), source.indexOf('const distance ='));
+  const W = require('./world.js');
+  for (const id of Object.keys(W.AFFIXES)) {
+    assert.ok(typeof W.AFFIXES[id].desc === 'string' && W.AFFIXES[id].desc.length > 8, id + ' must explain itself');
+    if (id === 'none') continue;
+    assert.ok(body.includes(`case '${id}'`), id + ' is offered on the map but changes nothing in combat');
+  }
+  // A tampered snapshot cannot smuggle an endless mark or barrier back into a resumed battle.
+  const guard = E.newRun({ seed: 78 });
+  guard.units = [E.unit(guard, 'nightdew', 20), E.unit(guard, 'stargazer', 32)];
+  E.createBattle(guard);
+  assert.ok(E.validate(guard));
+  for (const [key, value] of [
+    ['markUntil', 900],
+    ['weaken', 4],
+    ['reflectUntil', 900],
+    ['hasteBuff', 50],
+    ['rampStacks', 999],
+  ]) {
+    const tampered = E.clone(guard);
+    tampered.battle.units[0][key] = value;
+    assert.equal(E.validate(tampered), false, key + ' must be bounded in a saved battle');
+  }
+  // The two newest ones reach the enemy the way their copy promises.
+  const s = E.newRun({ seed: 77 });
+  const node = E.currentNode(s);
+  const foe = E.enemyRoster(s)[0];
+  node.affix = 'resonant';
+  assert.equal(E.unitStats(s, foe, 1).spellCrit, 0.5);
+  node.affix = 'brand';
+  assert.ok(E.unitStats(s, foe, 1).mark > 0);
+  node.affix = 'none';
+  assert.equal(E.unitStats(s, foe, 1).mark, 0);
+});
+check('A seven-strong party fits the board, the ledger and the merchant that supports it', () => {
+  const s = E.newRun({ seed: 909 });
+  s.gold = 99;
+  while (s.capacity < E.maxCapacity(s)) assert.ok(!E.expand(s).error);
+  assert.equal(s.capacity, 7);
+  for (const type of ['guard', 'knight', 'oakmaul', 'tideguard', 'emberguard', 'nightdew', 'prismguard'])
+    s.units.push(E.unit(s, type));
+  assert.ok(!E.autoDeploy(s).error);
+  const board = E.deployed(s).map(u => u.pos);
+  assert.equal(new Set(board).size, board.length, 'seven melee companions must not share a tile');
+  assert.ok(board.every(p => p >= E.HOME && p < E.COLS * E.ROWS));
+  assert.equal(board.length, 7);
+  assert.ok(E.validate(s));
+  const battle = E.createBattle(s);
+  assert.ok(battle.battle && E.validate(s));
+  // The merchant sells the emblem that is closest to finishing a tier.
+  const trip = E.newRun({ seed: 909 });
+  trip.units = [E.unit(trip, 'tideguard', 20), E.unit(trip, 'wavecaller', 32), E.unit(trip, 'guard', 21)];
+  const stop = trip.map.find(n => n.kind === 'merchant' && n.act === 0),
+    from = trip.map.find(n => n.next.includes(stop.id));
+  trip.phase = 'map';
+  trip.nodeId = from.id;
+  trip.stage = from.act * 9 + from.floor;
+  trip.visited = [trip.nodeId];
+  trip.completed = [trip.nodeId];
+  assert.ok(!E.enterNode(trip, stop.id).error, 'the merchant must be reachable from its own predecessor');
+  const emblem = trip.merchant.find(o => o.key.startsWith('item:emblem_'));
+  assert.ok(emblem, 'a merchant must offer an emblem');
+  assert.equal(emblem.key, 'item:emblem_tide', 'the offer follows the tier the party can finish next');
+  trip.gold = 99;
+  assert.ok(!E.merchantBuy(trip, emblem.id).error);
+  assert.ok(trip.bag.includes('emblem_tide'));
+});
 console.log(`\n${checks} rule checks passed.`);

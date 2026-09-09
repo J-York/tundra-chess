@@ -233,7 +233,7 @@
   function showGuide() {
     showDialog(
       'guide',
-      `${heading('给初次远征的你', '布阵没有倒计时，慢慢想，选出自己的答案。', 'THE TRAVELER’S FIELD GUIDE')}<div class="guide-grid"><div class="guide-step"><h3>01 · 组建队伍</h3><p>酒馆招募到备战席，点击伙伴再点我方下方三排上阵，也可拖动。点击其他场上伙伴可交换。整队会自动挑选并排好伙伴。</p></div><div class="guide-step"><h3>02 · 升星与羁绊</h3><p>3 个同种、同星伙伴自动合成，最高 3 星。22 位伙伴、5 个阵营与5类职业。阵营 2 / 3 种触发，职业 2 种触发；每个阵营至少4位可选。溪羽琴师兼属林地 / 潮汐，星火斥候兼属星辉 / 余烬，可连接不同阵容。同一种棋子重复上阵不重复计算羁绊。不同阵营与职业可以同时生效。</p></div><div class="guide-step"><h3>03 · 经济取舍</h3><p>每场战斗 1 次免费刷新，战败后下场 2 次；事件与营地不重置。酒馆成长位优先补齐已有一星对子。胜利按结算前金币每 10 枚给 1 利息，最多 2；三连胜起额外 1 金币。商人出售装备和遗物，预留金币才有选择。</p></div><div class="guide-step"><h3>04 · 观察敌人</h3><p>守卫嘲讽并抵挡伤害，刺客先潜伏 1.5 秒再切入后排，落地后有 1 秒不可选中的影幕保护（仍受范围伤害），法师擅长范围伤害。棋子的站位影响承伤、寻路与技能覆盖。战力是参考，阵型和克制仍然重要。</p></div><div class="guide-step"><h3>05 · 技能与装备</h3><p>法力达到 100 自动施法。物理伤害受护甲减免；魔法仅计 45% 护甲；真实伤害无视护甲。装备每人一件，可免费卸下与交换，出售或合成不丢装备。</p></div><div class="guide-step"><h3>06 · 走自己的路</h3><p>三章共 27 个节点，从相连的地图节点选择路线。普通战斗给金币，22% 掉装备；精英与章节首领胜利选择遗物。营地可恢复 26 远征生命或精制装备。伙伴战后恢复，但胜利阵亡每人损失 2 远征生命，最多 8；普通战败扣更多生命后继续前进，首领战败远征结束。</p></div></div><p class="tiny">空格：开始 / 暂停 · R：刷新酒馆 · M：音效 · Esc：取消选中或关闭普通窗口。存档仅保存在当前浏览器，战斗中退出也可继续。</p><div class="modal-actions"><button class="secondary" id="all-codex">伙伴图鉴</button><button class="secondary" id="guide-builds">构筑手记</button><button class="primary" data-close>心中有数，出发 →</button></div>`,
+      `${heading('给初次远征的你', '布阵没有倒计时，慢慢想，选出自己的答案。', 'THE TRAVELER’S FIELD GUIDE')}<div class="guide-grid"><div class="guide-step"><h3>01 · 组建队伍</h3><p>酒馆招募到备战席，点击伙伴再点我方下方三排上阵，也可拖动。点击其他场上伙伴可交换。整队会自动挑选并排好伙伴。</p></div><div class="guide-step"><h3>02 · 升星与羁绊</h3><p>3 个同种、同星伙伴自动合成，最高 3 星。30 位伙伴、5 个阵营与 5 类职业。阵营分 2 / 3 / 4 三档，职业分 2 / 3 档（守卫、法师、辅助有第 4 档）；档次越高，除了数值还会解锁新效果，例如余烬四层的普攻溅射、月影四层的技能暴击。溪羽琴师、星火斥候、盐炉铸师、雾语行者各兼属两个阵营；商人出售的纹章还能为一位伙伴额外接上一个阵营。同一种棋子重复上阵不重复计算羁绊。</p></div><div class="guide-step"><h3>03 · 经济取舍</h3><p>每场战斗 1 次免费刷新，战败后下场 2 次；事件与营地不重置。酒馆成长位优先补齐已有一星对子。胜利按结算前金币每 10 枚给 1 利息，最多 2；三连胜起额外 1 金币。商人出售装备和遗物，预留金币才有选择。</p></div><div class="guide-step"><h3>04 · 观察敌人</h3><p>守卫嘲讽并抵挡伤害，刺客先潜伏 1.5 秒再切入后排，落地后有 1 秒不可选中的影幕保护（仍受范围伤害），法师擅长范围伤害。棋子的站位影响承伤、寻路与技能覆盖。战力是参考，阵型和克制仍然重要。</p></div><div class="guide-step"><h3>05 · 技能与装备</h3><p>法力达到 100 自动施法。物理伤害受护甲减免；魔法仅计 45% 护甲；真实伤害无视护甲。装备每人一件，可免费卸下与交换，出售或合成不丢装备。标记（易伤）提高目标受到的全部伤害，削弱降低对方造成的伤害，两者都只取最高的一层。</p></div><div class="guide-step"><h3>06 · 走自己的路</h3><p>三章共 27 个节点，从相连的地图节点选择路线。普通战斗给金币，22% 掉装备；精英与章节首领胜利选择遗物。营地可恢复 26 远征生命或精制装备。伙伴战后恢复，但胜利阵亡每人损失 2 远征生命，最多 8；普通战败扣更多生命后继续前进，首领战败远征结束。</p></div></div><p class="tiny">空格：开始 / 暂停 · R：刷新酒馆 · M：音效 · Esc：取消选中或关闭普通窗口。存档仅保存在当前浏览器，战斗中退出也可继续。</p><div class="modal-actions"><button class="secondary" id="all-codex">伙伴图鉴</button><button class="secondary" id="guide-builds">构筑手记</button><button class="primary" data-close>心中有数，出发 →</button></div>`,
     );
   }
 
@@ -265,7 +265,7 @@
               .map(([id, r]) => `<option value="${id}" ${ui.codexRole === id ? 'selected' : ''}>${r}</option>`)
               .join(
                 '',
-              )}</select></label><small>显示 ${types.length} / 22 位</small></div><p class="tiny muted">阵营加成与职业羁绊可以交叉搭配；双阵营伙伴会同时计入两边。每个角色仍只有一个主动技能。</p>`
+              )}</select></label><small>显示 ${types.length} / ${Object.values(E.TYPES).filter(d => d.cost).length} 位</small></div><p class="tiny muted">阵营 2 / 3 / 4 档，职业 2 / 3（守卫、法师、辅助到 4）档，可以交叉搭配；双阵营伙伴同时计入两边，纹章还能为一位伙伴额外接上一个阵营。每个角色仍只有一个主动技能。</p>`
           : ''
       }<div class="codex-grid" ${types.length === 1 ? 'style="grid-template-columns:1fr"' : ''}>${
         types
@@ -280,14 +280,17 @@
 
   function showTrait(id) {
     const f = E.FACTIONS[id],
-      r = E.ROLE_TRAITS[id],
+      trait = f || E.ROLE_TRAITS[id],
       roster = E.deployed(state),
+      held = E.traits(roster)[id] || 0,
+      reached = E.tierIndex(id, held),
       types = Object.keys(E.TYPES).filter(
         t => E.TYPES[t].cost > 0 && (f ? E.hasFaction(t, id) : E.TYPES[t].role === id),
       );
+    const emblem = f ? E.ITEMS['emblem_' + id] : null;
     showDialog(
       'trait',
-      `${heading((f?.icon || r.icon) + ' ' + (f?.name || r.name), '只计算上阵的不同种类伙伴；重复棋子不会重复增加羁绊层数。', 'SYNERGY NOTES')}<div class="skill-box">${f ? f.desc.map((d, i) => `<p><b>${i + 2} 种伙伴：</b>${d}</p>`).join('') : `<p>${r.desc}</p>`}</div><div class="codex-grid">${types.map(t => `<article class="codex-card">${art(t)}<h3>${E.TYPES[t].name}</h3><small>${T.factionName(t)} · ${E.ROLES[E.TYPES[t].role]}</small><small>${roster.some(u => u.type === t) ? '✓ 已上阵' : '尚未上阵'}</small><button class="quiet" data-codex="${t}">查看技能 ↗</button></article>`).join('')}</div><div class="modal-actions"><button class="primary" data-close>继续布阵</button></div>`,
+      `${heading(trait.icon + ' ' + trait.name, '只计算上阵的不同种类伙伴；重复棋子不会重复增加羁绊层数。', 'SYNERGY NOTES')}<div class="skill-box"><p class="tiny">当前 ${held} 种${reached >= 0 ? ` · 已达成第 ${reached + 1} 档` : ' · 尚未触发'}</p>${trait.desc.map((d, i) => `<p class="${reached === i ? 'gain' : ''}"><b>${trait.thresholds[i]} 种伙伴：</b>${d}</p>`).join('')}${emblem ? `<p class="tiny">${emblem.icon} ${emblem.name}：${emblem.desc}</p>` : ''}</div><div class="codex-grid">${types.map(t => `<article class="codex-card">${art(t)}<h3>${E.TYPES[t].name}</h3><small>${T.factionName(t)} · ${E.ROLES[E.TYPES[t].role]}</small><small>${roster.some(u => u.type === t) ? '✓ 已上阵' : '尚未上阵'}</small><button class="quiet" data-codex="${t}">查看技能 ↗</button></article>`).join('')}</div><div class="modal-actions"><button class="primary" data-close>继续布阵</button></div>`,
     );
   }
 
@@ -309,6 +312,9 @@
       ['critPower', '暴击倍率', '%'],
       ['castMana', '施法回蓝', 1],
       ['emergencyShield', '木心护盾', '%'],
+      ['resist', '魔法减伤', '%'],
+      ['ramp', '每层攻击', '%'],
+      ['mark', '技能易伤', '%'],
     ];
     return (
       fields
