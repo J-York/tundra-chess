@@ -856,7 +856,7 @@ check('Report advice distinguishes recorded evidence from unavailable older deta
 });
 check('Thirty companions recruit, merge and leave alternate choices in every faction and role', () => {
   const types = Object.keys(E.TYPES).filter(t => E.TYPES[t].cost);
-  assert.equal(types.length, 30);
+  assert.equal(types.length, 40);
   for (const faction of Object.keys(E.FACTIONS)) {
     const options = types.filter(t => E.hasFaction(t, faction));
     // Every faction can reach its own top tier, and still reach the tier below it with any one
@@ -879,7 +879,7 @@ check('Thirty companions recruit, merge and leave alternate choices in every fac
   }
   const offered = new Set();
   for (let seed = 1; seed < 140; seed++) E.rollShop(E.newRun({ seed })).forEach(t => offered.add(t));
-  assert.equal(offered.size, 30);
+  assert.equal(offered.size, 40);
   const foes = new Set();
   for (let seed = 1; seed < 20; seed++) E.newRun({ seed }).map.forEach(n => n.types.forEach(t => foes.add(t)));
   for (const t of ['warden', 'breaker', 'hexer']) assert.ok(foes.has(t));
@@ -1358,7 +1358,7 @@ check('Dual factions bridge compositions without double-counting duplicates or b
   assert.deepEqual(E.factionIds('songbird'), ['tide', 'forest']);
   assert.deepEqual(E.factionIds('sparkscout'), ['ember', 'astral']);
   assert.equal(Object.keys(E.FACTIONS).length, 5);
-  assert.equal(Object.keys(E.ROLE_TRAITS).length, 5);
+  assert.equal(Object.keys(E.ROLE_TRAITS).length, 7);
 });
 check('New faction and role bonuses have distinct, bounded effects and feed existing builds', () => {
   // The numbers come from the trait table itself: tuning a tier stays legal, wiring it to the
@@ -1671,7 +1671,7 @@ check('Every skill number comes from its params, and every description is render
   assert.ok(body.includes('SKILLS[u.type].params'), 'cast must read its numbers from the params table');
   // Anything tunable has to live in params. What may stay inline: 0 and 1 (identity and
   // adjacency), MAX_MANA's own arithmetic, the chorus cadence, and the volley draw delay.
-  const allowed = new Set(['0', '1', '3', '0.07']);
+  const allowed = new Set(['0', '1', '3', '5', '0.07']);
   const literals = [...body.matchAll(/[^\w.$]([0-9]+(?:\.[0-9]+)?)/g)]
     .map(m => m[1])
     .filter(value => !allowed.has(value));

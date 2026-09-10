@@ -7,11 +7,11 @@
     HOME = 18,
     BENCH = 8,
     LAST_STAGE = W.CHAPTERS.length * W.FLOORS - 1;
-  const RULESET = 'companions-30';
+  const RULESET = 'companions-40';
   const LEGACY_RULESET = 'twelve-1';
   // Saves and records written before this ruleset stay readable: an expedition already on the
   // road keeps its generated map and finishes under the current rules.
-  const PRIOR_RULESETS = [LEGACY_RULESET, 'companions-22'];
+  const PRIOR_RULESETS = [LEGACY_RULESET, 'companions-22', 'companions-30'];
   // Rule constants shared by the battle code and by the text that describes it. Anything a
   // skill description quotes lives here or in that skill's params, never as a loose literal.
   const MAX_MANA = 100;
@@ -519,6 +519,158 @@
       desc: '震击全场造成 85% 攻击的魔法伤害；半血时狂怒，攻击速度提升 35%。',
       flavor: '整片森林，在它的胸膛里呼吸。',
     },
+    tideassassin: {
+      name: '暗潮潜刃',
+      faction: 'tide',
+      extraFaction: 'ember',
+      role: 'assassin',
+      cost: 3,
+      hp: 155,
+      atk: 35,
+      armor: 7,
+      range: 1,
+      interval: 1.1,
+      mana: 25,
+      color: '#7ba8b5',
+      skill: '深渊伏流',
+      flavor: '潮水退去的地方，藏着最锋利的暗流。',
+    },
+    moonsupport: {
+      name: '月铃祝者',
+      faction: 'moon',
+      role: 'support',
+      cost: 3,
+      hp: 165,
+      atk: 22,
+      armor: 8,
+      range: 3,
+      interval: 1.35,
+      mana: 45,
+      color: '#a0b3cf',
+      skill: '月泉洗礼',
+      flavor: '月光化作水，洗去所有的疲惫。',
+    },
+    forestberserker: {
+      name: '苔原狂战',
+      faction: 'forest',
+      role: 'berserker',
+      cost: 3,
+      hp: 210,
+      atk: 32,
+      armor: 10,
+      range: 1,
+      interval: 1.2,
+      mana: 15,
+      color: '#8db87e',
+      skill: '狂木裂击',
+      flavor: '当苔藓被撕开，底下的力量比石头更硬。',
+    },
+    emberberserker: {
+      name: '熔岩斗士',
+      faction: 'ember',
+      role: 'berserker',
+      cost: 2,
+      hp: 195,
+      atk: 29,
+      armor: 8,
+      range: 1,
+      interval: 1.15,
+      mana: 10,
+      color: '#d4976e',
+      skill: '烈焰碎击',
+      flavor: '越接近熄灭，烧得越烈。',
+    },
+    moonberserker: {
+      name: '残月战鬼',
+      faction: 'moon',
+      role: 'berserker',
+      cost: 4,
+      hp: 230,
+      atk: 38,
+      armor: 12,
+      range: 1,
+      interval: 1.25,
+      mana: 20,
+      color: '#8a97b5',
+      skill: '月殇连斩',
+      flavor: '月色越暗，刀越快。',
+    },
+    tideberserker: {
+      name: '怒潮战鳍',
+      faction: 'tide',
+      role: 'berserker',
+      cost: 3,
+      hp: 220,
+      atk: 30,
+      armor: 11,
+      range: 1,
+      interval: 1.2,
+      mana: 15,
+      color: '#6ca8a3',
+      skill: '逆流冲击',
+      flavor: '逆着浪走的人，浪就成了他的武器。',
+    },
+    astralseer: {
+      name: '星轨先知',
+      faction: 'astral',
+      role: 'seer',
+      cost: 4,
+      hp: 150,
+      atk: 28,
+      armor: 5,
+      range: 4,
+      interval: 1.5,
+      mana: 35,
+      color: '#b5a6d9',
+      skill: '星预言',
+      flavor: '她看见的不仅是星光，还有光落下的方向。',
+    },
+    forestseer: {
+      name: '古木先知',
+      faction: 'forest',
+      role: 'seer',
+      cost: 3,
+      hp: 155,
+      atk: 25,
+      armor: 5,
+      range: 4,
+      interval: 1.45,
+      mana: 40,
+      color: '#8bb589',
+      skill: '根须启示',
+      flavor: '老树不开口，但根知道所有的路。',
+    },
+    emberseer: {
+      name: '炉心先知',
+      faction: 'ember',
+      extraFaction: 'astral',
+      role: 'seer',
+      cost: 3,
+      hp: 155,
+      atk: 27,
+      armor: 5,
+      range: 4,
+      interval: 1.45,
+      mana: 35,
+      color: '#c9a681',
+      skill: '灼视预兆',
+      flavor: '炉火照见的不是铁，是铁将要走的方向。',
+    },
+    tideseer: {
+      name: '深渊先知',
+      faction: 'tide',
+      role: 'seer',
+      cost: 2,
+      hp: 140,
+      atk: 24,
+      armor: 4,
+      range: 4,
+      interval: 1.45,
+      mana: 40,
+      color: '#7faeb0',
+      skill: '潮声预判',
+      flavor: '潮声里藏着明天的答案。',
+    },
   };
   // A trait is a list of thresholds and the values each one grants. stats() reads the values,
   // the synergy panel prints the rendered text, and neither can drift from the other. Adding a
@@ -612,6 +764,26 @@
       tiers: [{ crit: 0.15 }, { crit: 0.27, critPower: 0.3 }],
       text: v =>
         `刺客普攻暴击率 +${pct(v.crit)}%` + (v.critPower ? `，刺客暴击伤害 +${pct(v.critPower)} 个百分点` : ''),
+    },
+    berserker: {
+      name: '狂战',
+      icon: '⚡',
+      thresholds: [2, 3],
+      tiers: [{ fury: 0.12 }, { fury: 0.22, furyLeech: 0.08 }],
+      text: v => `狂战生命低于 50% 时攻击 +${pct(v.fury)}%` + (v.furyLeech ? `，普攻吸血 ${pct(v.furyLeech)}%` : ''),
+    },
+    seer: {
+      name: '先知',
+      icon: '◉',
+      thresholds: [2, 3, 4],
+      tiers: [
+        { power: 0.08, manaRegen: 1 },
+        { power: 0.15, manaRegen: 2, weakenBoost: 0.08 },
+        { power: 0.25, manaRegen: 3, weakenBoost: 0.15 },
+      ],
+      text: v =>
+        `全队技能强度 +${pct(v.power)}%，每秒额外恢复 ${num(v.manaRegen)} 法力` +
+        (v.weakenBoost ? `；先知施加的削弱效果额外降低 ${pct(v.weakenBoost)}% 伤害` : ''),
     },
   };
   const rendered = defs => {
@@ -799,6 +971,65 @@
       params: { ratio: 0.85, fury: 0.35 },
       text: p => `震击全场造成 ${pct(p.ratio)}% 攻击的魔法伤害；半血时狂怒，攻击速度提升 ${pct(p.fury)}%。`,
     },
+    tideassassin: {
+      params: { ratio: 2.2, slow: 3 },
+      text: p =>
+        `开场潜伏 ${num(AMBUSH_SECONDS)} 秒后切入，落地有 ${num(STEALTH_SECONDS)} 秒影幕保护；` +
+        `对当前目标造成 ${pct(p.ratio)}% 攻击的物理伤害并减速 ${num(p.slow)} 秒。同时计入潮汐与余烬羁绊。`,
+    },
+    moonsupport: {
+      params: { flat: 50, ratio: 1.2, targets: 2 },
+      text: p => `治疗最虚弱的${cn(p.targets)}名友军 ${num(p.flat)} + ${pct(p.ratio)}% 攻击，并清除眩晕。`,
+    },
+    forestberserker: {
+      params: { ratio: 2.5, bonus: 0.3, furyThreshold: 0.5 },
+      text: p =>
+        `对当前目标造成 ${pct(p.ratio)}% 攻击的物理伤害；` +
+        `自身生命低于 ${pct(p.furyThreshold)}% 时伤害额外提高 ${pct(p.bonus)}%。`,
+    },
+    emberberserker: {
+      params: { ratio: 1.8, burnRatio: 0.12, burnDuration: 4 },
+      text: p =>
+        `对当前目标造成 ${pct(p.ratio)}% 攻击的物理伤害，` +
+        `并施加 ${num(p.burnDuration)} 秒灼烧：每秒受到 ${pct(p.burnRatio)}% 攻击的魔法伤害。`,
+    },
+    moonberserker: {
+      params: { hits: 3, ratio: 0.9, step: 0.1, bonus: 0.15, furyThreshold: 0.5 },
+      text: p =>
+        `对当前目标连斩${cn(p.hits)}刀，每刀造成 ${pct(p.ratio)}% 攻击的物理伤害；` +
+        `自身生命低于 ${pct(p.furyThreshold)}% 时，每低于 ${pct(p.step)} 生命比例，每刀额外提高 ${pct(p.bonus)}% 伤害。`,
+    },
+    tideberserker: {
+      params: { ratio: 2, shieldRatio: 0.4, shieldDuration: 4, furyThreshold: 0.5 },
+      text: p =>
+        `对当前目标造成 ${pct(p.ratio)}% 攻击的物理伤害；` +
+        `自身生命低于 ${pct(p.furyThreshold)}% 时，获得 ${pct(p.shieldRatio)}% 最大生命的护盾，持续 ${num(p.shieldDuration)} 秒。`,
+    },
+    astralseer: {
+      params: { ratio: 1.6, weaken: 0.25, weakenDuration: 5, radius: 1 },
+      text: p =>
+        `对目标及其 ${num(p.radius)} 格内敌人造成 ${pct(p.ratio)}% 攻击的魔法伤害，` +
+        `并削弱 ${num(p.weakenDuration)} 秒：它们造成的伤害降低 ${pct(p.weaken)}%。`,
+    },
+    forestseer: {
+      params: { ratio: 1.3, radius: 1, slow: 3, weaken: 0.18, weakenDuration: 4 },
+      text: p =>
+        `对目标及其 ${num(p.radius)} 格内敌人造成 ${pct(p.ratio)}% 攻击的魔法伤害，` +
+        `减速 ${num(p.slow)} 秒并削弱 ${num(p.weakenDuration)} 秒：` +
+        `它们造成的伤害降低 ${pct(p.weaken)}%。`,
+    },
+    emberseer: {
+      params: { ratio: 1.5, mark: 0.2, markDuration: 5 },
+      text: p =>
+        `对当前目标造成 ${pct(p.ratio)}% 攻击的魔法伤害并标记 ${num(p.markDuration)} 秒：` +
+        `被标记者受到的伤害提高 ${pct(p.mark)}%。同时计入余烬与星辉羁绊。`,
+    },
+    tideseer: {
+      params: { ratio: 1.2, manaRestore: 18, targets: 2 },
+      text: p =>
+        `对当前目标造成 ${pct(p.ratio)}% 攻击的魔法伤害，` +
+        `并为法力最低的${cn(p.targets)}名其他友军各恢复 ${num(p.manaRestore)} 法力。`,
+    },
   };
   for (const [type, skill] of Object.entries(SKILLS)) TYPES[type].desc = skill.text(skill.params);
   // Factions hold different numbers of companions (林地 6 … 潮汐 / 余烬 4) but share the same
@@ -816,7 +1047,15 @@
     const smallest = Math.min(...[def.faction, def.extraFaction].filter(Boolean).map(id => FACTION_ROSTER[id]));
     return (def.cost === 4 ? 2 : 3) + (LARGEST_FACTION - smallest);
   };
-  const ROLES = { guardian: '守卫', ranger: '游侠', mage: '法师', support: '辅助', assassin: '刺客' };
+  const ROLES = {
+    guardian: '守卫',
+    ranger: '游侠',
+    mage: '法师',
+    support: '辅助',
+    assassin: '刺客',
+    berserker: '狂战',
+    seer: '先知',
+  };
   const ROLE_TRAITS = rendered(ROLE_DEFS);
   // Equipment text is generated from the stats themselves, so a value and its description
   // cannot drift apart. Refined copies scale the stats and re-render the same template, which
@@ -1041,6 +1280,33 @@
     },
     spring: { name: '林间泉水', icon: '♧', values: { life: 25 }, text: v => `立即恢复 ${num(v.life)} 点远征生命` },
     purse: { name: '旅人的钱袋', icon: '◈', values: { gold: 7 }, text: v => `立即获得 ${num(v.gold)} 金币` },
+    furyrelic: {
+      name: '血焰战纹',
+      icon: '⚡',
+      build: 'fury',
+      values: { hpThreshold: 0.6, atkBonus: 0.15, leechBonus: 0.1 },
+      text: v => `友军生命低于 ${pct(v.hpThreshold)}% 时攻击 +${pct(v.atkBonus)}%、普攻吸血 ${pct(v.leechBonus)}%`,
+    },
+    seerrelic: {
+      name: '先知铭碑',
+      icon: '◉',
+      build: 'seer',
+      values: { weakenBonus: 0.12, manaBonus: 10 },
+      text: v => `友军施加的削弱效果额外降低 ${pct(v.weakenBonus)}% 伤害；先知初始法力 +${num(v.manaBonus)}`,
+    },
+    burnrelic: {
+      name: '余烬烙印',
+      icon: '♨',
+      build: 'burn',
+      values: { burnBonus: 0.08, burnExtend: 2 },
+      text: v => `友军施加的灼烧每秒伤害提高攻击的 ${pct(v.burnBonus)}%，并延长 ${num(v.burnExtend)} 秒`,
+    },
+    resonance: {
+      name: '共鸣之风',
+      icon: '♩',
+      values: { haste: 0.06, manaRegen: 1 },
+      text: v => `全队攻击速度 +${pct(v.haste)}%，每秒额外恢复 ${num(v.manaRegen)} 法力`,
+    },
   };
   const RELICS = {};
   const RELIC_VALUES = {};
@@ -1245,6 +1511,33 @@
         desc: '标记目标 → 全队对它的伤害提高 → 集火同一个敌人。',
         tip: '标记只取最高的一层，但持续时间取较长的；信标同时加强所有来源的标记。',
       },
+      {
+        id: 'fury',
+        name: '狂燃血战',
+        relic: 'furyrelic',
+        ready: t.berserker >= 2 || hasType('forestberserker') || hasType('moonberserker'),
+        source: '两种狂战、苔原狂战或残月战鬼',
+        desc: '低血量 → 攻击与吸血 → 残血反杀而不是倒下。',
+        tip: '狂战羁绊与血焰战纹都关注低血量，两者叠加；保持治疗可以在触发后回稳。',
+      },
+      {
+        id: 'seer',
+        name: '预言刻印',
+        relic: 'seerrelic',
+        ready: t.seer >= 2 || hasType('astralseer') || hasType('forestseer'),
+        source: '两种先知、星轨先知或古木先知',
+        desc: '削弱敌人输出 → 队伍承受更少伤害 → 长时间战斗中优势不断积累。',
+        tip: '削弱只取最强一层；先知铭碑和先知三层的削弱加成叠加到同一次施法中。',
+      },
+      {
+        id: 'burn',
+        name: '烙印延烧',
+        relic: 'burnrelic',
+        ready: hasType('emberberserker') || hasType('emberseer') || t.ember >= 3,
+        source: '熔岩斗士、炉心先知或三种余烬',
+        desc: '灼烧持续扣血 → 烙印加强并延长 → 敌人在承受普攻之外额外流失生命。',
+        tip: '灼烧不受护甲减免，对高护甲敌人尤其有效；余烬四层溅射能更快压低血线。',
+      },
     ];
     return builds.map(b => ({ ...b, owned: hasRelic(b.relic), active: hasRelic(b.relic) && b.ready }));
   }
@@ -1350,7 +1643,9 @@
       wind = tierOf('ranger', t),
       echo = tierOf('mage', t),
       chorus = tierOf('support', t),
-      night = tierOf('assassin', t);
+      night = tierOf('assassin', t),
+      fury = tierOf('berserker', t),
+      sight = tierOf('seer', t);
     // Role traits reward the companions that carry them; faction traits reach the whole party.
     const mine = role => (d.role === role ? 1 : 0);
     const hp = Math.round(
@@ -1376,18 +1671,25 @@
           (ember.haste || 0) +
           relicValue(relics, 'tempo', 'haste') +
           (i.haste || 0) +
-          mine('ranger') * (wind.haste || 0)),
+          mine('ranger') * (wind.haste || 0) +
+          (relicValue(relics, 'resonance', 'haste') || 0)),
       moveInterval: 0.36 / (1 + (i.move || 0)),
-      power: 1 + (astral.power || 0) + (echo.power || 0) + (i.power || 0),
+      power: 1 + (astral.power || 0) + (echo.power || 0) + (i.power || 0) + (sight.power || 0),
       mana: Math.min(
         MAX_MANA,
         d.mana +
           (astral.mana || 0) +
           mine('support') * (chorus.mana || 0) +
           relicValue(relics, 'spark', 'mana') +
-          (i.mana || 0),
+          (i.mana || 0) +
+          mine('seer') * relicValue(relics, 'seerrelic', 'manaBonus'),
       ),
-      manaRegen: 3 + (echo.manaRegen || 0) + (astral.manaRegen || 0),
+      manaRegen:
+        3 +
+        (echo.manaRegen || 0) +
+        (astral.manaRegen || 0) +
+        (sight.manaRegen || 0) +
+        (relicValue(relics, 'resonance', 'manaRegen') || 0),
       regen: (forest.regen || 0) + mine('guardian') * (wall.regen || 0),
       crit: Math.min(0.9, (moon.crit || 0) + mine('assassin') * (night.crit || 0) + (i.crit || 0)),
       critPower: 1.5 + (moon.critPower || 0) + mine('assassin') * (night.critPower || 0) + (i.critPower || 0),
@@ -1411,6 +1713,12 @@
       overflow: relicValue(relics, 'overflow', 'share'),
       castMana: (i.castMana || 0) + mine('support') * (chorus.castMana || 0),
       emergencyShield: i.emergencyShield || 0,
+      furyAtk: mine('berserker') * (fury.fury || 0) + (relicValue(relics, 'furyrelic', 'atkBonus') || 0),
+      furyLeech: mine('berserker') * (fury.furyLeech || 0) + (relicValue(relics, 'furyrelic', 'leechBonus') || 0),
+      furyRelicThreshold: relicValue(relics, 'furyrelic', 'hpThreshold') || 1,
+      weakenBoost: mine('seer') * (sight.weakenBoost || 0) + (relicValue(relics, 'seerrelic', 'weakenBonus') || 0),
+      burnBonus: relicValue(relics, 'burnrelic', 'burnBonus') || 0,
+      burnExtend: relicValue(relics, 'burnrelic', 'burnExtend') || 0,
     };
   }
   function rollShop(s) {
@@ -1711,6 +2019,13 @@
           reflectUntil: 0,
           hasteBuff: 0,
           hasteUntil: 0,
+          burn: null,
+          furyAtk: st.furyAtk || 0,
+          furyLeech: st.furyLeech || 0,
+          furyRelicThreshold: st.furyRelicThreshold || 1,
+          weakenBoost: st.weakenBoost || 0,
+          burnBonus: st.burnBonus || 0,
+          burnExtend: st.burnExtend || 0,
         });
       }
     for (const u of b.units.filter(u => TYPES[u.type].role === 'assassin')) {
@@ -2104,6 +2419,78 @@
       case 'ancient':
         foes.forEach(v => hurt(b, u, v, atk * sp.ratio * power, 'magic'));
         break;
+      case 'tideassassin': {
+        const victim =
+          foes.filter(v => !(v.stealthUntil > b.time)).sort((a, b2) => a.hp / a.maxHp - b2.hp / b2.maxHp)[0] || target;
+        hurt(b, u, victim, atk * sp.ratio * power);
+        victim.slow = Math.max(victim.slow, b.time + sp.slow);
+        break;
+      }
+      case 'moonsupport':
+        friends
+          .sort((a, b2) => a.hp / a.maxHp - b2.hp / b2.maxHp)
+          .slice(0, sp.targets)
+          .forEach(v => {
+            v.stun = 0;
+            heal(b, u, v, (sp.flat + atk * sp.ratio) * power);
+          });
+        break;
+      case 'forestberserker': {
+        const mult = u.hp / u.maxHp <= sp.furyThreshold ? 1 + sp.bonus : 1;
+        hurt(b, u, target, atk * sp.ratio * power * mult);
+        break;
+      }
+      case 'emberberserker':
+        hurt(b, u, target, atk * sp.ratio * power);
+        target.burn = {
+          damage: Math.round(atk * (sp.burnRatio + u.burnBonus)),
+          until: b.time + sp.burnDuration + u.burnExtend,
+          sourceId: u.id,
+        };
+        break;
+      case 'moonberserker': {
+        const missing = Math.min(5, Math.floor((1 - u.hp / u.maxHp) / sp.step));
+        const mult = 1 + sp.bonus * missing;
+        for (let i = 0; i < sp.hits; i++) hurt(b, u, target, atk * sp.ratio * power * mult);
+        break;
+      }
+      case 'tideberserker':
+        hurt(b, u, target, atk * sp.ratio * power);
+        if (u.hp / u.maxHp <= sp.furyThreshold) shield(b, u, u, u.maxHp * sp.shieldRatio, sp.shieldDuration);
+        break;
+      case 'astralseer':
+        foes
+          .filter(v => distance(v.pos, target.pos) <= sp.radius)
+          .forEach(v => {
+            hurt(b, u, v, atk * sp.ratio * power, 'magic');
+            const totalWeaken = sp.weaken + u.weakenBoost;
+            v.weaken = Math.max(v.weaken || 0, totalWeaken);
+            v.weakenUntil = Math.max(v.weakenUntil || 0, b.time + sp.weakenDuration);
+          });
+        break;
+      case 'forestseer':
+        foes
+          .filter(v => distance(v.pos, target.pos) <= sp.radius)
+          .forEach(v => {
+            hurt(b, u, v, atk * sp.ratio * power, 'magic');
+            v.slow = Math.max(v.slow, b.time + sp.slow);
+            const totalWeaken = sp.weaken + u.weakenBoost;
+            v.weaken = Math.max(v.weaken || 0, totalWeaken);
+            v.weakenUntil = Math.max(v.weakenUntil || 0, b.time + sp.weakenDuration);
+          });
+        break;
+      case 'emberseer':
+        hurt(b, u, target, atk * sp.ratio * power, 'magic');
+        applyMark(b, u, target, sp.mark, sp.markDuration);
+        break;
+      case 'tideseer':
+        hurt(b, u, target, atk * sp.ratio * power, 'magic');
+        friends
+          .filter(v => v !== u)
+          .sort((a, b2) => a.mana - b2.mana)
+          .slice(0, sp.targets)
+          .forEach(v => (v.mana = Math.min(MAX_MANA, v.mana + sp.manaRestore * power)));
+        break;
     }
     if (!u.dead && u.castMana) {
       u.mana = Math.min(MAX_MANA, u.mana + u.castMana);
@@ -2137,6 +2524,34 @@
       u.attackCd = Math.max(0, u.attackCd - dt);
       u.moveCd = Math.max(0, u.moveCd - dt);
       if (u.regen) u.hp = Math.min(u.maxHp, u.hp + u.maxHp * u.regen * dt * (u.wither > b.time ? 0.5 : 1));
+      // Burn: ticking magic damage from emberberserker's skill
+      if (u.burn && u.burn.until > b.time && !u.dead) {
+        const source = b.units.find(v => v.id === u.burn.sourceId);
+        const burnDmg = u.burn.damage * dt;
+        if (burnDmg > 0 && source && !source.dead) {
+          hurt(b, source, u, burnDmg, 'magic', false, false, true);
+        } else if (burnDmg > 0) {
+          // Source dead: burn still ticks but no source for procs
+          const mitigation = (100 / (100 + u.armor * 0.45)) * (1 - (u.resist || 0));
+          const actual = Math.max(1, Math.round(burnDmg * mitigation));
+          u.hp = Math.max(0, u.hp - actual);
+          b.events.push({
+            type: 'damage',
+            id: u.id,
+            value: actual,
+            absorbed: 0,
+            pos: u.pos,
+            kind: 'magic',
+            critical: false,
+            from: u.pos,
+          });
+          if (u.hp <= 0) {
+            u.dead = true;
+            b.events.push({ type: 'death', id: u.id, pos: u.pos });
+          }
+        }
+      }
+      if (u.burn && u.burn.until <= b.time) u.burn = null;
       if (u.type === 'ancient' && u.hp / u.maxHp <= 0.5 && !u.furious) {
         u.furious = true;
         u.interval = u.baseInterval / (1 + SKILLS.ancient.params.fury);
@@ -2219,7 +2634,12 @@
         u.attackCd = tempo * 0.8;
       } else {
         const critical = random(b) < u.crit;
-        const raw = u.atk * (0.96 + random(b) * 0.08) * (critical ? u.critPower : 1);
+        let raw = u.atk * (0.96 + random(b) * 0.08) * (critical ? u.critPower : 1);
+        // Fury: berserker trait + fury relic — both activate at low HP
+        const furyActive = u.hp / u.maxHp <= 0.5;
+        const furyRelicActive = u.hp / u.maxHp <= u.furyRelicThreshold;
+        if (furyActive || furyRelicActive)
+          raw *= 1 + (furyActive ? u.furyAtk : 0) + (furyRelicActive && !furyActive ? u.furyAtk : 0);
         b.events.push({ type: 'attack', id: u.id, from: u.pos, to: target.pos, unitType: u.type, ranged: u.range > 1 });
         hurt(b, u, target, raw, 'physical', true, critical);
         if (u.trueShot && !target.dead) hurt(b, u, target, u.atk * u.trueShot, 'true', false, false, true);
@@ -2227,6 +2647,11 @@
           alive(b, 1 - u.side)
             .filter(v => v !== target && distance(v.pos, target.pos) <= 1)
             .forEach(v => hurt(b, u, v, u.atk * u.splash, 'magic', false, false, true));
+        // Fury leech: heal for a fraction of damage dealt when at low HP
+        if ((furyActive || furyRelicActive) && u.furyLeech > 0 && !u.dead) {
+          const leechAmt = raw * u.furyLeech;
+          if (leechAmt > 0) heal(b, u, u, leechAmt);
+        }
         if (u.ramp && u.rampStacks < RAMP_STACKS) {
           u.rampStacks++;
           u.atk = Math.round(u.baseAtk * (1 + u.ramp * u.rampStacks));
@@ -2484,6 +2909,9 @@
                 spell: 'moonlens',
                 execute: 'warhorn',
                 mark: 'catalyst',
+                fury: 'warhorn',
+                seer: 'channel',
+                burn: 'catalyst',
               }[missing.id]
             : deployed(s).some(u => TYPES[u.type].role === 'support')
               ? 'charm'
@@ -2896,7 +3324,7 @@
           integer(n.formation, 0, 2) &&
           Array.isArray(n.types) &&
           n.types.length >= 2 &&
-          n.types.length <= 7 &&
+          n.types.length <= 8 &&
           n.types.every(t => has(TYPES, t)) &&
           Array.isArray(n.stars) &&
           n.stars.length === n.types.length &&

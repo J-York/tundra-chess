@@ -102,13 +102,28 @@
       types: ['nightdew', 'mistcaller', 'healer', 'oakmaul', 'hexer', 'vineclaw', 'duskblade'],
       tip: '迷雾削弱伤害、凋零削弱治疗，猎豹再收残血。净化和爆发技能能打破这个循环。',
     },
+    depths: {
+      name: '深渊暗流',
+      types: ['tideassassin', 'tideguard', 'wavecaller', 'pearl', 'tideseer', 'driftbow', 'saltforge'],
+      tip: '暗潮潜刃切入后排，深渊先知回蓝支援。用守卫保护后排，先打断先知的节奏。',
+    },
+    prophecy: {
+      name: '预言之庭',
+      types: ['astralseer', 'forestseer', 'emberseer', 'knight', 'mage', 'healer', 'prismguard'],
+      tip: '三位先知同时削弱伤害，长期消耗对你不利。用爆发技能快速击破，或带净化移除削弱。',
+    },
+    fury: {
+      name: '狂战之焰',
+      types: ['emberberserker', 'moonberserker', 'tideberserker', 'forestberserker', 'emberdrum', 'flarebow', 'guard'],
+      tip: '狂战低血量时攻击力暴增。尽量在他们触发前压到斩杀线，或用控制技能锁定。',
+    },
   };
   const CHAPTERS = [
     {
       name: '苔林边境',
       theme: 'forest',
       subtitle: '在旧林里，找到同行的人。',
-      pool: ['patrol', 'grove', 'ambush', 'chase', 'estuary', 'wanderers', 'mistfen'],
+      pool: ['patrol', 'grove', 'ambush', 'chase', 'estuary', 'wanderers', 'mistfen', 'fury'],
       boss: {
         name: '荆棘树王',
         types: ['ancient', 'ranger', 'healer', 'guard'],
@@ -122,7 +137,19 @@
       name: '沉星回廊',
       theme: 'ruin',
       subtitle: '星光之下，每一次停留都有代价。',
-      pool: ['stars', 'bulwark', 'frost', 'grove', 'estuary', 'furnace', 'crossroads', 'observatory', 'tempest'],
+      pool: [
+        'stars',
+        'bulwark',
+        'frost',
+        'grove',
+        'estuary',
+        'furnace',
+        'crossroads',
+        'observatory',
+        'tempest',
+        'prophecy',
+        'depths',
+      ],
       boss: {
         name: '星泉议会',
         types: ['knight', 'mage', 'oracle', 'frost', 'mage', 'hunter'],
@@ -148,11 +175,14 @@
         'observatory',
         'tempest',
         'mistfen',
+        'depths',
+        'fury',
+        'prophecy',
       ],
       boss: {
         name: '永夜守望者',
-        types: ['ancient', 'knight', 'mage', 'healer', 'rogue', 'hunter', 'nightdew'],
-        stars: [1, 2, 2, 2, 2, 2, 2],
+        types: ['ancient', 'knight', 'mage', 'healer', 'tideassassin', 'moonberserker', 'astralseer', 'moonsupport'],
+        stars: [1, 2, 2, 2, 2, 2, 2, 2],
         scale: 1.0,
         affix: 'lastwood',
         tip: '前排护盾和后排突袭同时出现。治疗只能争取时间，还需要足够输出在狂怒后结束战斗。',

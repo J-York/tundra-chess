@@ -167,6 +167,15 @@
           vineclaw: 'rogue',
           mistcaller: 'frost',
           wavecaller: 'frost',
+          tideassassin: 'rogue',
+          forestberserker: 'breaker',
+          emberberserker: 'breaker',
+          moonberserker: 'breaker',
+          tideberserker: 'breaker',
+          astralseer: 'mage',
+          forestseer: 'frost',
+          emberseer: 'hunter',
+          tideseer: 'mage',
         }[type]
       ];
     if (!mark) return;
@@ -256,10 +265,15 @@
             'emberdrum',
             'saltforge',
             'prismguard',
+            'moonsupport',
           ].includes(ev.unitType)
         )
           ring(
-            ['guard', 'oakmaul'].includes(ev.unitType) ? ev.pos : ev.to,
+            ['guard', 'oakmaul', 'forestberserker', 'emberberserker', 'moonberserker', 'tideberserker'].includes(
+              ev.unitType,
+            )
+              ? ev.pos
+              : ev.to,
             ev.unitType === 'frost' ? '#badfee' : '#d2c7ed',
             ev.unitType === 'ancient' ? 170 : 55,
           );
@@ -268,7 +282,7 @@
           for (let col = 0; col < 6; col++) ring(Math.floor(ev.to / 6) * 6 + col, '#9edfe7', 30);
         if (ev.unitType === 'driftbow') for (let row = 0; row < 6; row++) ring((ev.to % 6) + row * 6, '#8fd0c8', 30);
         audio.play(
-          ['healer', 'oracle', 'pearl', 'emberdrum'].includes(ev.unitType)
+          ['healer', 'oracle', 'pearl', 'emberdrum', 'moonsupport'].includes(ev.unitType)
             ? 'heal'
             : [
                   'guard',
@@ -280,6 +294,7 @@
                   'saltforge',
                   'prismguard',
                   'nightdew',
+                  'tideberserker',
                 ].includes(ev.unitType)
               ? 'shield'
               : 'magic',

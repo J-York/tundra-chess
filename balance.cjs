@@ -3,7 +3,7 @@
 const E = require('./engine.js');
 function manage(s, style) {
   const favorites = Object.keys(E.TYPES).filter(t => E.hasFaction(t, style));
-  const wanted = [...favorites, 'guard', 'healer', 'mage'];
+  const wanted = [...favorites, 'guard', 'healer', 'mage', 'berserker', 'seer'];
   const desired = Math.min(E.maxCapacity(s), 3 + Math.floor((s.stage + 1) / 3));
   while (s.capacity < desired && s.gold >= E.expandCost(s) + 3) E.expand(s);
   const good = t => {
@@ -44,10 +44,13 @@ function manage(s, style) {
           st.armor * 0.5 +
           st.startShield * 0.5 +
           (st.healing - 1) * 25 +
-          (E.TYPES[u.type].role === 'support' ? 15 : 0)
+          (E.TYPES[u.type].role === 'support' ? 15 : 0) +
+          (E.TYPES[u.type].role === 'seer' ? 12 : 0) +
+          (E.TYPES[u.type].role === 'berserker' ? 8 : 0) +
+          st.furyAtk * 3
         );
       }, 0);
-      if (!party.some(u => E.TYPES[u.type].role === 'guardian')) score *= 0.8;
+      if (!party.some(u => E.TYPES[u.type].role === 'guardian' || E.TYPES[u.type].role === 'berserker')) score *= 0.8;
       if (traits[style] >= 3) score *= 1.1;
       if (score > bestScore) {
         bestScore = score;
@@ -92,14 +95,18 @@ function manage(s, style) {
               ? 4
               : 1
             : item === 'wand' || item === 'catalyst'
-              ? ['mage', 'support'].includes(E.TYPES[u.type].role)
+              ? ['mage', 'support', 'seer'].includes(E.TYPES[u.type].role)
                 ? 4
                 : 1
               : item === 'charm'
                 ? E.TYPES[u.type].role === 'support'
                   ? 4
                   : 1
-                : E.TYPES[u.type].atk / 15);
+                : item === 'warhorn'
+                  ? E.TYPES[u.type].role === 'berserker' || E.TYPES[u.type].role === 'ranger'
+                    ? 4
+                    : 1
+                  : E.TYPES[u.type].atk / 15);
       return value(b) - value(a);
     });
     const target = ordered.find(u => !u.item && (!faction || !E.hasFaction(u.type, faction)));
@@ -112,6 +119,7 @@ function rewardScore(s, key) {
   if (key === 'relic:wisdom') return s.stage < 15 ? 13 : 4;
   if (key === 'relic:edge' || key === 'relic:vigor' || key === 'relic:tempo') return 11;
   if (key === 'relic:bargain') return 4;
+  if (key === 'relic:furyrelic' || key === 'relic:seerrelic' || key === 'relic:burnrelic') return 10;
   return 8;
 }
 function routeScore(s, n, risky = false) {
